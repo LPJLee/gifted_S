@@ -1,0 +1,12 @@
+{
+  "name": "gifted_s",
+  "version": "1.0.0",
+  "description": "國語生字聽寫 Web App (iPad + Apple Pencil 手寫田字格)",
+  "scripts": {
+    "start": "npx serve .",
+    "preview": "npx serve ."
+  },
+  "keywords": ["chinese", "dictation", "ipad", "apple-pencil", "tianzige"],
+  "author": "",
+  "license": "MIT"
+}
