@@ -28,10 +28,10 @@ class AppController {
     this.quizResults = []; // 儲存作答成果截圖與比對資訊
     this.hasPlayedCurrentAudio = false;
 
-    this.loadSettings();
     this.initDOM();
-    this.bindEvents();
     this.initTimerCallbacks();
+    this.loadSettings();
+    this.bindEvents();
   }
 
   loadSettings() {
@@ -62,6 +62,9 @@ class AppController {
 
     // 套用計時秒數
     this.timer.setDuration(this.settings.countdownSeconds);
+    if (this.elTimerBadge) {
+      this.elTimerBadge.textContent = `${this.settings.countdownSeconds}s`;
+    }
 
     // 套用語速
     speech.setRate(this.settings.speechRate);
@@ -267,9 +270,16 @@ class AppController {
 
     // 重置狀態
     this.hasPlayedCurrentAudio = false;
+    this.timer.setDuration(this.settings.countdownSeconds);
     this.timer.reset();
-    this.elTimerBadge.classList.remove('warning', 'locked');
-    this.elTimerBar.classList.remove('warning');
+    if (this.elTimerBadge) {
+      this.elTimerBadge.textContent = `${this.settings.countdownSeconds}s`;
+      this.elTimerBadge.classList.remove('warning', 'locked');
+    }
+    if (this.elTimerBar) {
+      this.elTimerBar.style.width = '100%';
+      this.elTimerBar.classList.remove('warning');
+    }
     this.elLockOverlay.classList.remove('visible');
     this.btnClearCanvas.disabled = false;
     this.btnUndoStroke.disabled = false;
@@ -694,6 +704,22 @@ class AppController {
           e.preventDefault();
           doSave();
         }
+      });
+
+      // 輸入數字時即時同步至計時器與標籤，保證兩處秒數絕對一致
+      inputTimer.addEventListener('input', () => {
+        let sec = parseInt(inputTimer.value, 10);
+        if (!isNaN(sec) && sec >= 5 && sec <= 300) {
+          this.settings.countdownSeconds = sec;
+          this.timer.setDuration(sec);
+          if (this.elTimerBadge) {
+            this.elTimerBadge.textContent = `${sec}s`;
+          }
+        }
+      });
+
+      inputTimer.addEventListener('change', () => {
+        doSave();
       });
     }
   }
