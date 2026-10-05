@@ -111,14 +111,16 @@ const sound = new SoundEffects();
 
 // === 語音模組 ===
 /**
- * Web Speech API 國語發音模組 (支援 iPad Safari 原生 zh-TW 高品質語音)
+ * Web Speech API 國語發音模組 (支援 iPad Safari 原生 zh-TW 高品質語音、音量放大與人聲選擇)
  */
 class SpeechManager {
   constructor() {
     this.synth = window.speechSynthesis;
     this.voices = [];
+    this.selectedVoiceURI = '';
     this.twVoice = null;
     this.rate = 0.85; // 稍慢語速，適合聽寫
+    this.volume = 1.0; // 最大音量 (100%)
     this.pitch = 1.0;
     this.isSpeaking = false;
 
@@ -133,17 +135,79 @@ class SpeechManager {
   loadVoices() {
     if (!this.synth) return;
     this.voices = this.synth.getVoices();
-    
-    // 優先尋找臺灣國語語音 (zh-TW, cmn-Hant-TW, 包含 Siri / 美佳 / 漢漢 / Google 國語)
-    this.twVoice = this.voices.find(v => 
-      v.lang === 'zh-TW' || 
-      v.lang === 'cmn-Hant-TW' || 
-      v.lang.replace('_', '-').toLowerCase() === 'zh-tw'
-    ) || this.voices.find(v => v.lang.startsWith('zh'));
+    this.findBestTwVoice();
+  }
+
+  findBestTwVoice() {
+    if (!this.voices || this.voices.length === 0) return;
+
+    // 若使用者已手動指定特定的語音
+    if (this.selectedVoiceURI) {
+      const found = this.voices.find(v => v.voiceURI === this.selectedVoiceURI);
+      if (found) {
+        this.twVoice = found;
+        return;
+      }
+    }
+
+    // 判斷是否為臺灣中文語音
+    const isTaiwanese = (v) => {
+      const lang = (v.lang || '').replace('_', '-').toLowerCase();
+      const name = (v.name || '').toLowerCase();
+      return (
+        lang === 'zh-tw' ||
+        lang === 'cmn-hant-tw' ||
+        lang === 'cmn-tw' ||
+        name.includes('taiwan') ||
+        name.includes('台灣') ||
+        name.includes('臺灣') ||
+        name.includes('mei-jia') ||
+        name.includes('美佳') ||
+        name.includes('hanhan') ||
+        name.includes('漢漢')
+      );
+    };
+
+    const twVoices = this.voices.filter(isTaiwanese);
+
+    if (twVoices.length > 0) {
+      // 優先挑選 Siri、增強 (Enhanced) 或 Natural 品質的臺灣人聲
+      const premiumVoice = twVoices.find(v => {
+        const n = (v.name || '').toLowerCase();
+        return n.includes('siri') || n.includes('enhanced') || n.includes('增強') || n.includes('natural');
+      });
+      this.twVoice = premiumVoice || twVoices[0];
+    } else {
+      // 次選：其他中文 (zh 開頭)
+      this.twVoice = this.voices.find(v => (v.lang || '').toLowerCase().startsWith('zh')) || null;
+    }
+  }
+
+  /**
+   * 取得裝置上所有的中文語音清單
+   */
+  getChineseVoices() {
+    if (!this.voices || this.voices.length === 0) {
+      this.loadVoices();
+    }
+    return this.voices.filter(v => {
+      const l = (v.lang || '').replace('_', '-').toLowerCase();
+      const n = (v.name || '').toLowerCase();
+      return l.startsWith('zh') || l.startsWith('cmn') || n.includes('taiwan') || n.includes('chinese');
+    });
+  }
+
+  setVoice(voiceURI) {
+    this.selectedVoiceURI = voiceURI || '';
+    this.findBestTwVoice();
   }
 
   setRate(val) {
     this.rate = Math.max(0.5, Math.min(1.5, parseFloat(val) || 0.85));
+  }
+
+  setVolume(val) {
+    this.volume = Math.max(0.1, Math.min(1.0, parseFloat(val) || 1.0));
   }
 
   /**
@@ -164,7 +228,7 @@ class SpeechManager {
       this.synth.cancel();
     }
 
-    if (!this.twVoice) {
+    if (!this.twVoice || this.voices.length === 0) {
       this.loadVoices();
     }
 
@@ -178,6 +242,7 @@ class SpeechManager {
 
     utterance.rate = this.rate;
     utterance.pitch = this.pitch;
+    utterance.volume = this.volume; // 設定為最高音量
 
     utterance.onstart = () => {
       this.isSpeaking = true;
@@ -295,7 +360,7 @@ class QuizTimer {
 // === 田字格畫布核心 ===
 /**
  * 田字格 / 米字格 Canvas 手寫核心模組
- * 深度支援 iPad + Apple Pencil 壓感、Retina 像素對齊與零延遲筆跡
+ * 深度支援 iPad + Apple Pencil 壓感、Retina 像素對齊、極速連筆採樣與防手掌誤觸
  */
 class TianZiGeCanvas {
   /**
@@ -313,11 +378,13 @@ class TianZiGeCanvas {
       inkColor: '#1e293b',
       baseStrokeWidth: 4.5,
       pressureSensitive: true,
+      penOnly: false, // 是否僅允許 Apple Pencil (防止手掌誤觸)
       onStrokeEnd: null
     }, options);
 
     this.isDrawing = false;
     this.isLocked = false;
+    this.currentPointerId = null;
     this.strokes = []; // 儲存歷史筆劃以支援「復原 (Undo)」
     this.currentStroke = [];
 
@@ -329,7 +396,6 @@ class TianZiGeCanvas {
 
   initCanvasSize() {
     const rect = this.canvas.getBoundingClientRect();
-    // 以當前容器寬度（例如 150px、80px 或 200px）為基準
     const width = Math.round(rect.width || 150);
     const height = Math.round(rect.height || 150);
 
@@ -351,13 +417,12 @@ class TianZiGeCanvas {
   bindEvents() {
     const el = this.canvas;
 
-    el.addEventListener('pointerdown', (e) => this.onPointerDown(e));
-    el.addEventListener('pointermove', (e) => this.onPointerMove(e));
-    el.addEventListener('pointerup', (e) => this.onPointerUp(e));
-    el.addEventListener('pointercancel', (e) => this.onPointerUp(e));
-    el.addEventListener('pointerleave', (e) => {
-      if (this.isDrawing) this.onPointerUp(e);
-    });
+    // 使用 { passive: false } 確保 e.preventDefault() 100% 生效，防止 iOS 瀏覽器手勢攔截與中斷筆劃
+    el.addEventListener('pointerdown', (e) => this.onPointerDown(e), { passive: false });
+    el.addEventListener('pointermove', (e) => this.onPointerMove(e), { passive: false });
+    el.addEventListener('pointerup', (e) => this.onPointerUp(e), { passive: false });
+    el.addEventListener('pointercancel', (e) => this.onPointerCancel(e), { passive: false });
+    // 移除 pointerleave，防止快速書寫筆尖掠過外框時被強制截斷！
   }
 
   /**
@@ -380,11 +445,19 @@ class TianZiGeCanvas {
   onPointerDown(e) {
     if (this.isLocked) return;
     
+    // 若開啟「Apple Pencil 專用模式」，忽略所有手指或手掌誤觸 (touch)
+    if (this.options.penOnly && e.pointerType === 'touch') {
+      return;
+    }
+
+    e.preventDefault();
+
     try {
       this.canvas.setPointerCapture(e.pointerId);
     } catch (err) {}
 
     this.isDrawing = true;
+    this.currentPointerId = e.pointerId;
     const pt = this.getPointerPos(e);
     this.currentStroke = [pt];
     this.drawDot(pt);
@@ -392,19 +465,39 @@ class TianZiGeCanvas {
 
   onPointerMove(e) {
     if (!this.isDrawing || this.isLocked) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
     
-    const pt = this.getPointerPos(e);
-    const lastPt = this.currentStroke[this.currentStroke.length - 1];
-    
-    this.currentStroke.push(pt);
+    e.preventDefault();
 
-    // 零延遲即時繪製線段，筆跡永遠緊貼筆尖
-    this.drawSegment(lastPt, pt);
+    // 關鍵升級：支援 iPad Pro/Air 240Hz 高頻採樣 (getCoalescedEvents)
+    // 快速運筆、連筆、撇捺時，完整捕獲所有微小座標點，絕不掉筆劃！
+    const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
+      ? e.getCoalescedEvents()
+      : [e];
+
+    for (const ev of events) {
+      const pt = this.getPointerPos(ev);
+      const lastPt = this.currentStroke[this.currentStroke.length - 1];
+      if (lastPt) {
+        const dx = pt.x - lastPt.x;
+        const dy = pt.y - lastPt.y;
+        // 忽略完全重合的靜止點，微小位移即時連線
+        if (dx * dx + dy * dy >= 0.25) {
+          this.currentStroke.push(pt);
+          this.drawSegment(lastPt, pt);
+        }
+      } else {
+        this.currentStroke.push(pt);
+      }
+    }
   }
 
   onPointerUp(e) {
     if (!this.isDrawing) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
+    
     this.isDrawing = false;
+    this.currentPointerId = null;
     
     try {
       this.canvas.releasePointerCapture(e.pointerId);
@@ -418,6 +511,11 @@ class TianZiGeCanvas {
     if (this.options.onStrokeEnd) {
       this.options.onStrokeEnd();
     }
+  }
+
+  onPointerCancel(e) {
+    // 即使被作業系統強制中斷，也妥善儲存已有筆劃，防止筆跡消失
+    this.onPointerUp(e);
   }
 
   /** 繪製落筆起始圓點 */
@@ -763,7 +861,10 @@ class AppController {
       gridSize: 'comfortable', // 'compact' (76px/2cm), 'comfortable' (150px), 'large' (200px)
       allowReplay: true,       // 倒數期間是否允許再次點擊播放重聽
       randomOrder: true,       // 是否隨機抽題
-      speechRate: 0.85         // 語音語速
+      speechRate: 0.85,        // 語音語速
+      speechVolume: 1.0,       // 語音音量 (預設 100% 最大)
+      voiceURI: '',            // 偏好的人聲 URI
+      penOnly: false           // Apple Pencil 專用模式 (防手掌誤觸)
     };
 
     this.timer = new QuizTimer(this.settings.countdownSeconds);
@@ -777,6 +878,13 @@ class AppController {
     this.initTimerCallbacks();
     this.loadSettings();
     this.bindEvents();
+
+    // 監聽瀏覽器/iPad 語音加載完成事件，動態更新選單
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        this.populateVoiceList();
+      };
+    }
   }
 
   loadSettings() {
@@ -811,8 +919,12 @@ class AppController {
       this.elTimerBadge.textContent = `${this.settings.countdownSeconds}s`;
     }
 
-    // 套用語速
+    // 套用語音設定 (語速、音量、人聲)
     speech.setRate(this.settings.speechRate);
+    speech.setVolume(this.settings.speechVolume !== undefined ? this.settings.speechVolume : 1.0);
+    if (this.settings.voiceURI) {
+      speech.setVoice(this.settings.voiceURI);
+    }
 
     // 同步更新設定面板上的控制項數值
     const inputTimer = document.getElementById('setting-timer');
@@ -821,6 +933,8 @@ class AppController {
     const checkReplay = document.getElementById('setting-replay');
     const checkRandom = document.getElementById('setting-random');
     const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const checkPenOnly = document.getElementById('setting-pen-only');
 
     if (inputTimer && document.activeElement !== inputTimer) {
       inputTimer.value = this.settings.countdownSeconds;
@@ -830,6 +944,35 @@ class AppController {
     if (checkReplay) checkReplay.checked = this.settings.allowReplay;
     if (checkRandom) checkRandom.checked = this.settings.randomOrder;
     if (selectRate) selectRate.value = this.settings.speechRate;
+    if (selectVolume) selectVolume.value = (this.settings.speechVolume !== undefined) ? String(this.settings.speechVolume) : '1.0';
+    if (checkPenOnly) checkPenOnly.checked = !!this.settings.penOnly;
+
+    this.populateVoiceList();
+  }
+
+  /**
+   * 填充 iPad/瀏覽器支援的中文人聲下拉清單
+   */
+  populateVoiceList() {
+    const selectVoice = document.getElementById('setting-voice');
+    if (!selectVoice) return;
+
+    const voices = speech.getChineseVoices();
+    const currentVal = this.settings.voiceURI || (speech.twVoice ? speech.twVoice.voiceURI : '');
+
+    selectVoice.innerHTML = '<option value="">自動推薦 (優先臺灣人聲)</option>';
+
+    voices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.voiceURI;
+      let label = v.name;
+      if (v.lang) label += ` [${v.lang}]`;
+      opt.textContent = label;
+      if (v.voiceURI === currentVal) {
+        opt.selected = true;
+      }
+      selectVoice.appendChild(opt);
+    });
   }
 
   initDOM() {
@@ -1062,6 +1205,7 @@ class AppController {
       // 實例化田字格手寫板
       const tianCanvas = new TianZiGeCanvas(canvasEl, {
         gridType: this.settings.gridType,
+        penOnly: !!this.settings.penOnly,
         onStrokeEnd: () => {
           // 書寫中若計時器尚未啟動，提示可先點播放
         }
@@ -1378,6 +1522,10 @@ class AppController {
     const checkReplay = document.getElementById('setting-replay');
     const checkRandom = document.getElementById('setting-random');
     const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const checkPenOnly = document.getElementById('setting-pen-only');
+    const selectVoice = document.getElementById('setting-voice');
+    const btnTestVoice = document.getElementById('btn-test-voice');
     const btnSaveSettings = document.getElementById('btn-save-settings');
     const saveMsg = document.getElementById('save-settings-msg');
 
@@ -1388,6 +1536,37 @@ class AppController {
     if (checkReplay) checkReplay.checked = this.settings.allowReplay;
     if (checkRandom) checkRandom.checked = this.settings.randomOrder;
     if (selectRate) selectRate.value = this.settings.speechRate;
+    if (selectVolume) selectVolume.value = (this.settings.speechVolume !== undefined) ? String(this.settings.speechVolume) : '1.0';
+    if (checkPenOnly) checkPenOnly.checked = !!this.settings.penOnly;
+
+    // 試聽按鈕事件
+    if (btnTestVoice) {
+      btnTestVoice.addEventListener('click', () => {
+        btnTestVoice.disabled = true;
+        const origText = btnTestVoice.innerHTML;
+        btnTestVoice.innerHTML = '<span>🔊 朗讀中...</span>';
+
+        // 試聽時套用目前選擇的人聲、音量與語速
+        if (selectVoice && selectVoice.value) {
+          speech.setVoice(selectVoice.value);
+        }
+        if (selectVolume) {
+          speech.setVolume(parseFloat(selectVolume.value) || 1.0);
+        }
+        if (selectRate) {
+          speech.setRate(parseFloat(selectRate.value) || 0.85);
+        }
+
+        speech.speak(
+          '小學國語生字聽寫，發音清晰！',
+          null,
+          () => {
+            btnTestVoice.disabled = false;
+            btnTestVoice.innerHTML = origText;
+          }
+        );
+      });
+    }
 
     // 執行儲存的統一函式
     const doSave = () => {
@@ -1406,6 +1585,9 @@ class AppController {
       if (checkReplay) this.settings.allowReplay = checkReplay.checked;
       if (checkRandom) this.settings.randomOrder = checkRandom.checked;
       if (selectRate) this.settings.speechRate = parseFloat(selectRate.value);
+      if (selectVolume) this.settings.speechVolume = parseFloat(selectVolume.value) || 1.0;
+      if (checkPenOnly) this.settings.penOnly = checkPenOnly.checked;
+      if (selectVoice) this.settings.voiceURI = selectVoice.value;
 
       // 3. 寫入 LocalStorage 並套用
       this.saveSettings();
@@ -1413,6 +1595,7 @@ class AppController {
       // 4. 即時更新現有畫布
       this.currentCanvases.forEach(c => {
         c.options.gridType = this.settings.gridType;
+        c.options.penOnly = !!this.settings.penOnly;
         c.initCanvasSize();
         c.render();
       });

@@ -194,6 +194,45 @@
 
           <div class="setting-row">
             <div class="setting-info">
+              <span class="setting-title">Apple Pencil 專用模式 (防手掌誤觸)</span>
+              <span class="setting-desc">開啟後手寫區僅感應 Apple Pencil，避免手掌靠在 iPad 螢幕時誤觸劃線</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-pen-only">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">朗讀人聲選擇</span>
+              <span class="setting-desc">系統自動優先推薦臺灣國語（如 Siri、美佳）</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <select id="setting-voice" class="form-select" style="max-width: 210px;">
+                <option value="">自動推薦 (優先臺灣人聲)</option>
+              </select>
+              <button id="btn-test-voice" type="button" class="tool-btn" style="white-space: nowrap; padding: 8px 12px; font-size: 0.9rem;">
+                <span>🔊 試聽</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">語音播放音量</span>
+              <span class="setting-desc">朗讀生字時的音量大小（預設 100% 最大音量）</span>
+            </div>
+            <select id="setting-speech-volume" class="form-select" style="width: 150px;">
+              <option value="1.0">100% (最大音量)</option>
+              <option value="0.9">90%</option>
+              <option value="0.8">80%</option>
+              <option value="0.6">60%</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
               <span class="setting-title">語音朗讀語速</span>
               <span class="setting-desc">調整臺灣國語語音朗讀的速度</span>
             </div>
@@ -226,8 +265,19 @@
             </label>
           </div>
 
+          <!-- iPad 聲音與發音優化小提示卡 -->
+          <div style="margin-top: 24px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 16px; color: #166534; font-size: 0.92rem; line-height: 1.6;">
+            <div style="font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 1rem;">
+              <span>💡 iPad 語音音量與標準臺灣發音設定技巧：</span>
+            </div>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li><strong>聲音太小？</strong>除了上方設定為 100% 外，請按 iPad 側邊的<strong>實體音量加鍵</strong>，將媒體音量調至最大。</li>
+              <li><strong>想要像老師一樣標準自然發音？</strong>請前往 iPad 的<strong>「設定」➔「輔助使用」➔「語音內容」➔「聲音」➔「中文 (臺灣)」</strong>，下載<strong>「Siri」</strong>或<strong>「美佳 (增強版)」</strong>高品質人聲，本系統將自動優先採用！</li>
+            </ul>
+          </div>
+
           <!-- 儲存設定按鈕 -->
-          <div style="margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <div style="margin-top: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
             <button id="btn-save-settings" class="btn-big-play" style="min-width: 220px; height: 52px; font-size: 1.15rem; background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);">
               <span>💾 儲存設定</span>
             </button>

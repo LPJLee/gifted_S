@@ -1,6 +1,6 @@
 /**
  * 田字格 / 米字格 Canvas 手寫核心模組
- * 深度支援 iPad + Apple Pencil 壓感、Retina 像素對齊與零延遲筆跡
+ * 深度支援 iPad + Apple Pencil 壓感、Retina 像素對齊、極速連筆採樣與防手掌誤觸
  */
 export class TianZiGeCanvas {
   /**
@@ -18,11 +18,13 @@ export class TianZiGeCanvas {
       inkColor: '#1e293b',
       baseStrokeWidth: 4.5,
       pressureSensitive: true,
+      penOnly: false, // 是否僅允許 Apple Pencil (防止手掌誤觸)
       onStrokeEnd: null
     }, options);
 
     this.isDrawing = false;
     this.isLocked = false;
+    this.currentPointerId = null;
     this.strokes = []; // 儲存歷史筆劃以支援「復原 (Undo)」
     this.currentStroke = [];
 
@@ -34,7 +36,6 @@ export class TianZiGeCanvas {
 
   initCanvasSize() {
     const rect = this.canvas.getBoundingClientRect();
-    // 以當前容器寬度（例如 150px、80px 或 200px）為基準
     const width = Math.round(rect.width || 150);
     const height = Math.round(rect.height || 150);
 
@@ -56,13 +57,12 @@ export class TianZiGeCanvas {
   bindEvents() {
     const el = this.canvas;
 
-    el.addEventListener('pointerdown', (e) => this.onPointerDown(e));
-    el.addEventListener('pointermove', (e) => this.onPointerMove(e));
-    el.addEventListener('pointerup', (e) => this.onPointerUp(e));
-    el.addEventListener('pointercancel', (e) => this.onPointerUp(e));
-    el.addEventListener('pointerleave', (e) => {
-      if (this.isDrawing) this.onPointerUp(e);
-    });
+    // 使用 { passive: false } 確保 e.preventDefault() 100% 生效，防止 iOS 瀏覽器手勢攔截與中斷筆劃
+    el.addEventListener('pointerdown', (e) => this.onPointerDown(e), { passive: false });
+    el.addEventListener('pointermove', (e) => this.onPointerMove(e), { passive: false });
+    el.addEventListener('pointerup', (e) => this.onPointerUp(e), { passive: false });
+    el.addEventListener('pointercancel', (e) => this.onPointerCancel(e), { passive: false });
+    // 移除 pointerleave，防止快速書寫筆尖掠過外框時被強制截斷！
   }
 
   /**
@@ -85,11 +85,19 @@ export class TianZiGeCanvas {
   onPointerDown(e) {
     if (this.isLocked) return;
     
+    // 若開啟「Apple Pencil 專用模式」，忽略所有手指或手掌誤觸 (touch)
+    if (this.options.penOnly && e.pointerType === 'touch') {
+      return;
+    }
+
+    e.preventDefault();
+
     try {
       this.canvas.setPointerCapture(e.pointerId);
     } catch (err) {}
 
     this.isDrawing = true;
+    this.currentPointerId = e.pointerId;
     const pt = this.getPointerPos(e);
     this.currentStroke = [pt];
     this.drawDot(pt);
@@ -97,19 +105,39 @@ export class TianZiGeCanvas {
 
   onPointerMove(e) {
     if (!this.isDrawing || this.isLocked) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
     
-    const pt = this.getPointerPos(e);
-    const lastPt = this.currentStroke[this.currentStroke.length - 1];
-    
-    this.currentStroke.push(pt);
+    e.preventDefault();
 
-    // 零延遲即時繪製線段，筆跡永遠緊貼筆尖
-    this.drawSegment(lastPt, pt);
+    // 關鍵升級：支援 iPad Pro/Air 240Hz 高頻採樣 (getCoalescedEvents)
+    // 快速運筆、連筆、撇捺時，完整捕獲所有微小座標點，絕不掉筆劃！
+    const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
+      ? e.getCoalescedEvents()
+      : [e];
+
+    for (const ev of events) {
+      const pt = this.getPointerPos(ev);
+      const lastPt = this.currentStroke[this.currentStroke.length - 1];
+      if (lastPt) {
+        const dx = pt.x - lastPt.x;
+        const dy = pt.y - lastPt.y;
+        // 忽略完全重合的靜止點，微小位移即時連線
+        if (dx * dx + dy * dy >= 0.25) {
+          this.currentStroke.push(pt);
+          this.drawSegment(lastPt, pt);
+        }
+      } else {
+        this.currentStroke.push(pt);
+      }
+    }
   }
 
   onPointerUp(e) {
     if (!this.isDrawing) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
+    
     this.isDrawing = false;
+    this.currentPointerId = null;
     
     try {
       this.canvas.releasePointerCapture(e.pointerId);
@@ -123,6 +151,11 @@ export class TianZiGeCanvas {
     if (this.options.onStrokeEnd) {
       this.options.onStrokeEnd();
     }
+  }
+
+  onPointerCancel(e) {
+    // 即使被作業系統強制中斷，也妥善儲存已有筆劃，防止筆跡消失
+    this.onPointerUp(e);
   }
 
   /** 繪製落筆起始圓點 */

@@ -18,7 +18,10 @@ class AppController {
       gridSize: 'comfortable', // 'compact' (76px/2cm), 'comfortable' (150px), 'large' (200px)
       allowReplay: true,       // 倒數期間是否允許再次點擊播放重聽
       randomOrder: true,       // 是否隨機抽題
-      speechRate: 0.85         // 語音語速
+      speechRate: 0.85,        // 語音語速
+      speechVolume: 1.0,       // 語音音量 (預設 100% 最大)
+      voiceURI: '',            // 偏好的人聲 URI
+      penOnly: false           // Apple Pencil 專用模式 (防手掌誤觸)
     };
 
     this.timer = new QuizTimer(this.settings.countdownSeconds);
@@ -32,6 +35,13 @@ class AppController {
     this.initTimerCallbacks();
     this.loadSettings();
     this.bindEvents();
+
+    // 監聽瀏覽器/iPad 語音加載完成事件，動態更新選單
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        this.populateVoiceList();
+      };
+    }
   }
 
   loadSettings() {
@@ -66,8 +76,12 @@ class AppController {
       this.elTimerBadge.textContent = `${this.settings.countdownSeconds}s`;
     }
 
-    // 套用語速
+    // 套用語音設定 (語速、音量、人聲)
     speech.setRate(this.settings.speechRate);
+    speech.setVolume(this.settings.speechVolume !== undefined ? this.settings.speechVolume : 1.0);
+    if (this.settings.voiceURI) {
+      speech.setVoice(this.settings.voiceURI);
+    }
 
     // 同步更新設定面板上的控制項數值
     const inputTimer = document.getElementById('setting-timer');
@@ -76,6 +90,8 @@ class AppController {
     const checkReplay = document.getElementById('setting-replay');
     const checkRandom = document.getElementById('setting-random');
     const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const checkPenOnly = document.getElementById('setting-pen-only');
 
     if (inputTimer && document.activeElement !== inputTimer) {
       inputTimer.value = this.settings.countdownSeconds;
@@ -85,6 +101,35 @@ class AppController {
     if (checkReplay) checkReplay.checked = this.settings.allowReplay;
     if (checkRandom) checkRandom.checked = this.settings.randomOrder;
     if (selectRate) selectRate.value = this.settings.speechRate;
+    if (selectVolume) selectVolume.value = (this.settings.speechVolume !== undefined) ? String(this.settings.speechVolume) : '1.0';
+    if (checkPenOnly) checkPenOnly.checked = !!this.settings.penOnly;
+
+    this.populateVoiceList();
+  }
+
+  /**
+   * 填充 iPad/瀏覽器支援的中文人聲下拉清單
+   */
+  populateVoiceList() {
+    const selectVoice = document.getElementById('setting-voice');
+    if (!selectVoice) return;
+
+    const voices = speech.getChineseVoices();
+    const currentVal = this.settings.voiceURI || (speech.twVoice ? speech.twVoice.voiceURI : '');
+
+    selectVoice.innerHTML = '<option value="">自動推薦 (優先臺灣人聲)</option>';
+
+    voices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.voiceURI;
+      let label = v.name;
+      if (v.lang) label += ` [${v.lang}]`;
+      opt.textContent = label;
+      if (v.voiceURI === currentVal) {
+        opt.selected = true;
+      }
+      selectVoice.appendChild(opt);
+    });
   }
 
   initDOM() {
@@ -317,6 +362,7 @@ class AppController {
       // 實例化田字格手寫板
       const tianCanvas = new TianZiGeCanvas(canvasEl, {
         gridType: this.settings.gridType,
+        penOnly: !!this.settings.penOnly,
         onStrokeEnd: () => {
           // 書寫中若計時器尚未啟動，提示可先點播放
         }
@@ -633,6 +679,10 @@ class AppController {
     const checkReplay = document.getElementById('setting-replay');
     const checkRandom = document.getElementById('setting-random');
     const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const checkPenOnly = document.getElementById('setting-pen-only');
+    const selectVoice = document.getElementById('setting-voice');
+    const btnTestVoice = document.getElementById('btn-test-voice');
     const btnSaveSettings = document.getElementById('btn-save-settings');
     const saveMsg = document.getElementById('save-settings-msg');
 
@@ -643,6 +693,37 @@ class AppController {
     if (checkReplay) checkReplay.checked = this.settings.allowReplay;
     if (checkRandom) checkRandom.checked = this.settings.randomOrder;
     if (selectRate) selectRate.value = this.settings.speechRate;
+    if (selectVolume) selectVolume.value = (this.settings.speechVolume !== undefined) ? String(this.settings.speechVolume) : '1.0';
+    if (checkPenOnly) checkPenOnly.checked = !!this.settings.penOnly;
+
+    // 試聽按鈕事件
+    if (btnTestVoice) {
+      btnTestVoice.addEventListener('click', () => {
+        btnTestVoice.disabled = true;
+        const origText = btnTestVoice.innerHTML;
+        btnTestVoice.innerHTML = '<span>🔊 朗讀中...</span>';
+
+        // 試聽時套用目前選擇的人聲、音量與語速
+        if (selectVoice && selectVoice.value) {
+          speech.setVoice(selectVoice.value);
+        }
+        if (selectVolume) {
+          speech.setVolume(parseFloat(selectVolume.value) || 1.0);
+        }
+        if (selectRate) {
+          speech.setRate(parseFloat(selectRate.value) || 0.85);
+        }
+
+        speech.speak(
+          '小學國語生字聽寫，發音清晰！',
+          null,
+          () => {
+            btnTestVoice.disabled = false;
+            btnTestVoice.innerHTML = origText;
+          }
+        );
+      });
+    }
 
     // 執行儲存的統一函式
     const doSave = () => {
@@ -661,6 +742,9 @@ class AppController {
       if (checkReplay) this.settings.allowReplay = checkReplay.checked;
       if (checkRandom) this.settings.randomOrder = checkRandom.checked;
       if (selectRate) this.settings.speechRate = parseFloat(selectRate.value);
+      if (selectVolume) this.settings.speechVolume = parseFloat(selectVolume.value) || 1.0;
+      if (checkPenOnly) this.settings.penOnly = checkPenOnly.checked;
+      if (selectVoice) this.settings.voiceURI = selectVoice.value;
 
       // 3. 寫入 LocalStorage 並套用
       this.saveSettings();
@@ -668,6 +752,7 @@ class AppController {
       // 4. 即時更新現有畫布
       this.currentCanvases.forEach(c => {
         c.options.gridType = this.settings.gridType;
+        c.options.penOnly = !!this.settings.penOnly;
         c.initCanvasSize();
         c.render();
       });
