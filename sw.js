@@ -1,15 +1,9 @@
-const CACHE_NAME = 'gifted-s-v1';
+const CACHE_NAME = 'gifted-s-v2';
 const ASSETS = [
   './',
   './index.html',
-  './css/style.css',
-  './js/app.js',
-  './js/canvas.js',
-  './js/speech.js',
-  './js/timer.js',
-  './js/bank.js',
-  './js/sound.js',
-  './manifest.json'
+  './manifest.json',
+  './icons/icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,6 +31,21 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // 網頁導航/HTML: 網路優先 (Network First)，有網路時自動取得最新版，離線時使用快取
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          const cloned = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 其他資源: 快取優先
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request);
