@@ -810,6 +810,23 @@ class AppController {
 
     // 套用語速
     speech.setRate(this.settings.speechRate);
+
+    // 同步更新設定面板上的控制項數值
+    const inputTimer = document.getElementById('setting-timer');
+    const selectGridSize = document.getElementById('setting-grid-size');
+    const selectGridType = document.getElementById('setting-grid-type');
+    const checkReplay = document.getElementById('setting-replay');
+    const checkRandom = document.getElementById('setting-random');
+    const selectRate = document.getElementById('setting-speech-rate');
+
+    if (inputTimer && document.activeElement !== inputTimer) {
+      inputTimer.value = this.settings.countdownSeconds;
+    }
+    if (selectGridSize) selectGridSize.value = this.settings.gridSize;
+    if (selectGridType) selectGridType.value = this.settings.gridType;
+    if (checkReplay) checkReplay.checked = this.settings.allowReplay;
+    if (checkRandom) checkRandom.checked = this.settings.randomOrder;
+    if (selectRate) selectRate.value = this.settings.speechRate;
   }
 
   initDOM() {
@@ -1336,62 +1353,87 @@ class AppController {
   }
 
   /**
-   * 綁定設定面板相關互動
+   * 綁定設定面板相關互動 (點擊儲存按鈕保存所有設定)
    */
   bindSettingsEvents() {
-    const selectTimer = document.getElementById('setting-timer');
+    const inputTimer = document.getElementById('setting-timer');
     const selectGridSize = document.getElementById('setting-grid-size');
     const selectGridType = document.getElementById('setting-grid-type');
     const checkReplay = document.getElementById('setting-replay');
     const checkRandom = document.getElementById('setting-random');
     const selectRate = document.getElementById('setting-speech-rate');
+    const btnSaveSettings = document.getElementById('btn-save-settings');
+    const saveMsg = document.getElementById('save-settings-msg');
 
-    if (selectTimer) {
-      selectTimer.value = this.settings.countdownSeconds;
-      selectTimer.onchange = (e) => {
-        this.settings.countdownSeconds = parseInt(e.target.value, 10);
-        this.saveSettings();
-      };
+    // 初始載入設定值至表單
+    if (inputTimer) inputTimer.value = this.settings.countdownSeconds;
+    if (selectGridSize) selectGridSize.value = this.settings.gridSize;
+    if (selectGridType) selectGridType.value = this.settings.gridType;
+    if (checkReplay) checkReplay.checked = this.settings.allowReplay;
+    if (checkRandom) checkRandom.checked = this.settings.randomOrder;
+    if (selectRate) selectRate.value = this.settings.speechRate;
+
+    // 執行儲存的統一函式
+    const doSave = () => {
+      // 1. 處理倒數時間 (允許輸入自訂數字，限制在 5 ~ 300 秒)
+      if (inputTimer) {
+        let sec = parseInt(inputTimer.value, 10);
+        if (isNaN(sec) || sec < 5) sec = 5;
+        if (sec > 300) sec = 300;
+        inputTimer.value = sec;
+        this.settings.countdownSeconds = sec;
+      }
+
+      // 2. 處理其他各項設定
+      if (selectGridSize) this.settings.gridSize = selectGridSize.value;
+      if (selectGridType) this.settings.gridType = selectGridType.value;
+      if (checkReplay) this.settings.allowReplay = checkReplay.checked;
+      if (checkRandom) this.settings.randomOrder = checkRandom.checked;
+      if (selectRate) this.settings.speechRate = parseFloat(selectRate.value);
+
+      // 3. 寫入 LocalStorage 並套用
+      this.saveSettings();
+
+      // 4. 即時更新現有畫布
+      this.currentCanvases.forEach(c => {
+        c.options.gridType = this.settings.gridType;
+        c.initCanvasSize();
+        c.render();
+      });
+
+      // 5. 提示使用者「設定已儲存」
+      if (btnSaveSettings) {
+        btnSaveSettings.innerHTML = '<span>✅ 設定已儲存！</span>';
+        btnSaveSettings.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+      }
+      if (saveMsg) {
+        saveMsg.style.display = 'flex';
+      }
+
+      setTimeout(() => {
+        if (btnSaveSettings) {
+          btnSaveSettings.innerHTML = '<span>💾 儲存設定</span>';
+          btnSaveSettings.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+        }
+        if (saveMsg) {
+          saveMsg.style.display = 'none';
+        }
+      }, 2000);
+    };
+
+    // 點擊「儲存設定」按鈕
+    if (btnSaveSettings) {
+      btnSaveSettings.addEventListener('click', doSave);
     }
 
-    if (selectGridSize) {
-      selectGridSize.value = this.settings.gridSize;
-      selectGridSize.onchange = (e) => {
-        this.settings.gridSize = e.target.value;
-        this.saveSettings();
-      };
-    }
-
-    if (selectGridType) {
-      selectGridType.value = this.settings.gridType;
-      selectGridType.onchange = (e) => {
-        this.settings.gridType = e.target.value;
-        this.saveSettings();
-      };
-    }
-
-    if (checkReplay) {
-      checkReplay.checked = this.settings.allowReplay;
-      checkReplay.onchange = (e) => {
-        this.settings.allowReplay = e.target.checked;
-        this.saveSettings();
-      };
-    }
-
-    if (checkRandom) {
-      checkRandom.checked = this.settings.randomOrder;
-      checkRandom.onchange = (e) => {
-        this.settings.randomOrder = e.target.checked;
-        this.saveSettings();
-      };
-    }
-
-    if (selectRate) {
-      selectRate.value = this.settings.speechRate;
-      selectRate.onchange = (e) => {
-        this.settings.speechRate = parseFloat(e.target.value);
-        this.saveSettings();
-      };
+    // 在倒數秒數輸入框按 Enter 亦可快速儲存
+    if (inputTimer) {
+      inputTimer.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          doSave();
+        }
+      });
     }
   }
 }
