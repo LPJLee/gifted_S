@@ -150,6 +150,9 @@ class AppController {
     this.btnExportBanks.addEventListener('click', () => bankManager.exportToJSON());
     this.fileImportInput.addEventListener('change', (e) => this.handleImportFile(e));
 
+    // 設定表單事件綁定
+    this.bindSettingsEvents();
+
     // 視窗大小改變或平板旋轉時自動更新畫布尺寸
     window.addEventListener('resize', () => {
       this.currentCanvases.forEach(c => {
@@ -210,6 +213,9 @@ class AppController {
 
     if (viewName === 'banks') {
       this.renderBankList();
+    }
+    if (viewName === 'settings') {
+      this.applySettingsToUI();
     }
   }
 
