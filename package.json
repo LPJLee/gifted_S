@@ -1,12 +1,25 @@
 {
   "name": "gifted_s",
-  "version": "1.0.0",
-  "description": "國語生字聽寫 Web App (iPad + Apple Pencil 手寫田字格)",
+  "version": "1.1.0",
+  "description": "學習樂園 Web App 集 (國語生字聽寫 + 數學直式加減運算，專為 iPad + Apple Pencil 設計)",
   "scripts": {
     "start": "npx serve .",
-    "preview": "npx serve ."
+    "preview": "npx serve .",
+    "build:dictation": "python dictation/build_bundle.py",
+    "build:math": "python math/build_bundle.py",
+    "deploy": "python deploy_github.py"
   },
-  "keywords": ["chinese", "dictation", "ipad", "apple-pencil", "tianzige"],
+  "keywords": [
+    "chinese",
+    "dictation",
+    "math",
+    "addition",
+    "subtraction",
+    "ipad",
+    "apple-pencil",
+    "tianzige",
+    "scratchpad"
+  ],
   "author": "",
   "license": "MIT"
 }

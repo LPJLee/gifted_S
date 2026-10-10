@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+  </defs>
+  <!-- 圓角背景 -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+  <!-- 田字格輔助底紋 -->
+  <rect x="76" y="76" width="360" height="360" rx="20" fill="none" stroke="#fee2e2" stroke-width="8"/>
+  <line x1="76" y1="256" x2="436" y2="256" stroke="#fee2e2" stroke-width="6" stroke-dasharray="16, 12"/>
+  <line x1="256" y1="76" x2="256" y2="436" stroke="#fee2e2" stroke-width="6" stroke-dasharray="16, 12"/>
+  <!-- 中央「字」 -->
+  <text x="256" y="340" font-family="'DFKai-SB', 'BiauKai', 'Noto Serif TC', serif" font-size="240" font-weight="bold" fill="#ffffff" text-anchor="middle">字</text>
+</svg>

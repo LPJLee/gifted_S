@@ -1,0 +1,17 @@
+{
+  "name": "數學直式加減運算",
+  "short_name": "數學加減",
+  "description": "專為 iPad + Apple Pencil 設計的 1~3 位數加減直式手寫計算練習 App",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

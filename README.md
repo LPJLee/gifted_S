@@ -1,84 +1,91 @@
-# 國語生字聽寫 Web App (iPad + Apple Pencil 手寫田字格)
+# 學習樂園 (Gifted Learning Suite)
 
-專為 iPad 與 Apple Pencil 設計的國語生字/詞語聽寫練習與測驗 Web 應用程式。
-
----
-
-## 🌟 核心特色
-
-1. **自訂題庫管理**：
-   - 自由建立多組題庫（如：「第一單元 生字」、「成語聽寫」）。
-   - 支援直接複製貼上多行文字或逗號分隔文字，一秒建立題庫。
-   - 支援 JSON 匯出與匯入，方便備份或跨裝置轉移。
-2. **20 題測驗規則**：
-   - 題庫若大於 20 題，系統會抽取 20 題；小於或等於 20 題則全部出題。
-   - 支援「隨機打亂出題」或「依序出題」。
-3. **臺灣國語語音朗讀**：
-   - 點擊「播放發音」按鈕，以清晰的臺灣國語朗讀題目（iPad Safari 原生高品質 Siri 語音）。
-   - 支援調整語速（慢速 0.7x、推薦 0.85x、標準 1.0x）。
-4. **倒數 30 秒自動防寫鎖定**：
-   - 點擊發音後立即啟動倒數（預設 30 秒，可在設定調整 15s~60s）。
-   - 最後 5 秒會有嗶聲與變色警示。
-   - 時間歸零（00:00）時自動鎖定田字格，禁止繼續作答。
-5. **iPad + Apple Pencil 田字格手寫板**：
-   - 根據詞語字數**自動生成對應格數**（單字 1 格、雙字詞 2 格、四字成語 4 格）。
-   - 支援 Apple Pencil 壓感與貝茲曲線平滑筆觸，字跡流暢如同真筆。
-   - 深度防手掌誤觸（Palm Rejection），手靠在螢幕上不會誤觸或滑動畫布。
-   - 提供「清除重寫」與「復原筆劃 (Undo)」按鈕。
-   - 支援切換「田字格」或「米字格」，以及調整格子大小（標準 2cm 或舒適手寫）。
-6. **對答案與批改結算**：
-   - 測驗完成後，並列顯示學生的「手寫筆跡」與電腦「標準楷體國字」。
-   - 提供「✓ 正確 / ✗ 錯誤」按鈕，家長或學生可手動核對並即時計算總分。
-7. **PWA 全螢幕模式**：
-   - iPad Safari 點擊「分享 ➔ 加入主畫面」，即可像原生 App 一樣無網址列全螢幕運行，且支援離線使用。
+專為 iPad 與 Apple Pencil 設計的國小自主學習 Web 應用程式集，包含**國語生字聽寫**與**數學直式加減運算**兩大模組。
 
 ---
 
-## 🚀 部署至 GitHub Pages 教學 (給 iPad 使用)
+## 📂 專案目錄結構
 
-只需三個步驟，就能讓您的 iPad 透過專屬網址隨時隨地練習：
-
-### 步驟 1：安裝 Git 並推送到 GitHub
-1. 開啟 PowerShell 安裝 Git（若尚未安裝）：
-   ```powershell
-   winget install --id Git.Git -e --source winget
-   ```
-2. 在此專案資料夾初始化並上傳：
-   ```powershell
-   git init
-   git add .
-   git commit -m "Initial commit: 國語生字聽寫 Web App"
-   git branch -M main
-   # 替換為您在 GitHub 上建立的 Repository 網址：
-   git remote add origin https://github.com/您的帳號/gifted_S.git
-   git push -u origin main
-   ```
-   *(或者直接使用 **GitHub Desktop** 軟體點擊 Add Local Repository，然後點 Publish Repository)*
-
-### 步驟 2：開啟 GitHub Pages 免費靜態託管
-1. 進入您在 GitHub 的專案頁面。
-2. 點擊頂部的 **Settings** ➔ 側邊欄點選 **Pages**。
-3. 在 **Build and deployment** 下方的 **Branch** 選擇 `main`，資料夾選擇 `/ (root)`，點擊 **Save**。
-4. 等候約 1~2 分鐘，上方會出現專屬網址：
-   `https://您的帳號.github.io/gifted_S/`
-
-### 步驟 3：在 iPad 上開啟並設為全螢幕 App
-1. 在 iPad 上使用 **Safari 瀏覽器** 開啟上述 GitHub Pages 網址。
-2. 點擊瀏覽器右上角的 **「分享」按鈕 (方框加向上箭頭)**。
-3. 下拉選單點選 **「加入主畫面 (Add to Home Screen)」**。
-4. 桌面上會出現紅色「字」的專屬圖示，點開即可全螢幕、無干擾地搭配 Apple Pencil 聽寫練習！
+```
+gifted_S/
+├── index.html                 # 學習大廳首頁 (提供聽寫與數學兩大 App 導覽卡片)
+├── deploy_github.py           # GitHub Pages 自動同步部署腳本
+├── package.json               # 專案腳本配置
+├── README.md                  # 本說明文件
+│
+├── dictation/                 # 國語生字聽寫 App
+│   ├── index.html             # 單檔離線可用版本
+│   ├── index_template.html    # 構建模板
+│   ├── build_bundle.py        # 單檔打包腳本
+│   ├── manifest.json          # PWA 配置
+│   ├── sw.js                  # Service Worker 離線快取
+│   ├── css/style.css
+│   ├── js/                    # 模組原始碼 (app, canvas, sound, speech, timer, bank, bundle)
+│   └── icons/icon.svg
+│
+└── math/                      # 數學直式加減運算 App
+    ├── index.html             # 單檔離線可用版本
+    ├── index_template.html    # 構建模板
+    ├── build_bundle.py        # 單檔打包腳本
+    ├── manifest.json          # PWA 配置
+    ├── sw.js                  # Service Worker 離線快取
+    ├── css/style.css
+    ├── js/                    # 模組原始碼 (app, canvas, math_engine, sound, timer, bundle)
+    └── icons/icon.svg
+```
 
 ---
 
-## 💻 本地測試預覽方式 (電腦端)
+## 🌟 App 核心功能說明
 
-在電腦端若想立刻體驗：
-* 直接在專案目錄使用任意靜態伺服器，例如：
-  ```powershell
-  npx.cmd serve .
-  ```
-  或 Python：
-  ```powershell
-  python -m http.server 8080
-  ```
-* 開啟瀏覽器訪問 `http://localhost:8080` 即可！
+### 1. 國語生字聽寫 App (`/dictation`)
+- **自訂題庫管理**：自由新增字詞、貼上文章快速斷詞解析、匯入匯出題庫 JSON。
+- **標準國語發音**：以清晰臺灣國語朗讀生字詞語（支援多段語速）。
+- **田字格/米字格手寫**：自動根據詞語字數生成田字格，Apple Pencil 極速連筆手寫、防手掌誤觸。
+- **自動計時與防寫鎖定**：倒數計時結束自動防寫鎖定。
+- **對答案與批改結算**：學生手寫筆跡與標準楷體國字對照，支援即時評分。
+
+### 2. 數學直式加減運算 App (`/math`)
+- **自由設定測驗題數**：預設 5、10、20、50 題或自訂任意題數 (1~100 題)。
+- **每題作答時間設定**：可選擇不限時、10s、15s、20s、30s、60s 或自訂秒數，最後 3 秒呼吸燈紅框警示與倒數提示音。
+- **位數與運算型態設定 (最高三位數)**：
+  - 一位數 (1~9)、二位數 (10~99)、三位數 (100~999)。
+  - 混合位數：二位數 ± 一位數、三位數 ± 二位數、全隨機 (1~3位)。
+  - 運算型態：加法 (+)、減法 (-)、加減混合 (±)。減法自動保證不出現負數。
+  - 進退位專項練習：隨機、不進退位 (基礎入門)、必須進退位 (直式精熟)。
+- **iPad 直式手寫草稿板 (Scratchpad)**：
+  - Apple Pencil 低延遲採樣，支援防手掌誤觸 (Palm Rejection 開關)。
+  - 直式對齊輔助線模式（百位、十位、個位虛線對位，防止計算對錯位）、方格紙、純白草稿紙切換。
+  - 「蓋印直式」功能：一鍵將當前題目以標準直式格式蓋印在草稿紙上。
+  - 復原 (Undo)、一鍵清空 (Clear)、橡皮擦、多種筆觸顏色與粗細。
+- **成績結算與手寫錯題筆跡回顧**：
+  - 統計答對率、總時間與平均每題秒數。
+  - 自動保存每題作答時在草稿板上的手寫筆跡快照，點擊「手寫草稿 📝」即可調閱查看計算過程。
+
+---
+
+## 🚀 本地預覽與打包
+
+### 1. 本地啟動伺服器
+```bash
+npx serve .
+# 或使用 Python
+python -m http.server 8080
+```
+開啟瀏覽器前往 `http://localhost:8080/` 即可進入學習大廳。
+
+### 2. 重新打包單檔
+若修改了 CSS 或 JS 原始檔，可執行打包腳本生成單檔 HTML：
+```bash
+# 打包聽寫 App
+python dictation/build_bundle.py
+
+# 打包數學 App
+python math/build_bundle.py
+```
+
+### 3. 一鍵部署至 GitHub Pages
+```bash
+python deploy_github.py
+```
+部署完成後，即可直接在 iPad Safari 開啟託管網址，並點擊「分享 ➔ 加入主畫面」全螢幕離線使用。

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#047857" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#mathGrad)"/>
+  <g filter="url(#shadow)" fill="#ffffff">
+    <!-- Plus symbol -->
+    <rect x="140" y="160" width="80" height="20" rx="10"/>
+    <rect x="170" y="130" width="20" height="80" rx="10"/>
+    <!-- Minus symbol -->
+    <rect x="292" y="160" width="80" height="20" rx="10"/>
+    <!-- Equals symbol -->
+    <rect x="140" y="320" width="80" height="18" rx="9"/>
+    <rect x="140" y="352" width="80" height="18" rx="9"/>
+    <!-- Multiply symbol or Scratchpad stylus -->
+    <path d="M 310,290 L 370,350 M 370,290 L 310,350" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#10b981">
+  <title>數學直式加減運算 - iPad Apple Pencil 手寫練習</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+  <!-- INJECT_STYLE -->
+</head>
+<body>
+  <!-- 頂部導覽列 -->
+  <header class="navbar">
+    <div class="nav-left">
+      <a href="../index.html" class="nav-btn">← 學習大廳</a>
+      <span class="nav-title">🧮 數學直式加減</span>
+    </div>
+    <div class="nav-right">
+      <button id="btn-pen-only" class="nav-btn" title="防手掌誤觸：開啟後僅 Apple Pencil 可書寫">✏️ Pencil 專用</button>
+      <button id="btn-mute" class="nav-btn">🔊 音效</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- ==================== 1. 設定畫面 ==================== -->
+    <section id="screen-setup" class="screen active">
+      <div class="setup-card">
+        <div class="setup-header">
+          <h2>測驗與直式運算設定</h2>
+          <p>自訂題數、倒數時間與位數，支援 Apple Pencil 直式草稿計算</p>
+        </div>
+
+        <!-- 題數設定 -->
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>📝 測驗題數</span>
+          </label>
+          <div class="opt-pill-group" data-field="questionCount">
+            <button class="opt-pill" data-val="5">5 題</button>
+            <button class="opt-pill active" data-val="10">10 題</button>
+            <button class="opt-pill" data-val="20">20 題</button>
+            <button class="opt-pill" data-val="50">50 題</button>
+            <button class="opt-pill" data-val="custom">自訂</button>
+          </div>
+          <div class="custom-input-wrap" style="display: none;">
+            <span>輸入題數 (1~100)：</span>
+            <input id="custom-count-input" type="number" min="1" max="100" value="15">
+          </div>
+        </div>
+
+        <!-- 每題時間設定 -->
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>⏱️ 每題作答時間</span>
+          </label>
+          <div class="opt-pill-group" data-field="timerSeconds">
+            <button class="opt-pill" data-val="0">不限時</button>
+            <button class="opt-pill" data-val="10">10 秒</button>
+            <button class="opt-pill" data-val="15">15 秒</button>
+            <button class="opt-pill active" data-val="20">20 秒</button>
+            <button class="opt-pill" data-val="30">30 秒</button>
+            <button class="opt-pill" data-val="60">60 秒</button>
+            <button class="opt-pill" data-val="custom">自訂</button>
+          </div>
+          <div class="custom-input-wrap" style="display: none;">
+            <span>輸入秒數 (5~300)：</span>
+            <input id="custom-time-input" type="number" min="5" max="300" value="25">
+          </div>
+        </div>
+
+        <!-- 位數設定 (最多三位數) -->
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>🔢 運算位數 (最高三位數)</span>
+          </label>
+          <div class="opt-pill-group" data-field="digitMode">
+            <button class="opt-pill" data-val="1">一位數 (1~9)</button>
+            <button class="opt-pill active" data-val="2">二位數 (10~99)</button>
+            <button class="opt-pill" data-val="3">三位數 (100~999)</button>
+            <button class="opt-pill" data-val="mixed_2_1">二位 ± 一位</button>
+            <button class="opt-pill" data-val="mixed_3_2">三位 ± 二位</button>
+            <button class="opt-pill" data-val="mixed_all">全隨機 (1~3位)</button>
+          </div>
+        </div>
+
+        <!-- 運算符號 -->
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>➕ 運算型態</span>
+          </label>
+          <div class="opt-pill-group" data-field="operation">
+            <button class="opt-pill active" data-val="+">加法 (+)</button>
+            <button class="opt-pill" data-val="-">減法 (-)</button>
+            <button class="opt-pill" data-val="mixed">加減混合 (±)</button>
+          </div>
+        </div>
+
+        <!-- 進位/退位規則 -->
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>🎯 進退位練習</span>
+          </label>
+          <div class="opt-pill-group" data-field="regroupMode">
+            <button class="opt-pill active" data-val="all">隨機進退位</button>
+            <button class="opt-pill" data-val="no_regroup">不進退位 (入門)</button>
+            <button class="opt-pill" data-val="must_regroup">必進退位 (精熟)</button>
+          </div>
+        </div>
+
+        <button id="btn-start" class="btn-start-quiz">
+          開始測驗 🚀
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== 2. 作答畫面 (雙欄) ==================== -->
+    <section id="screen-quiz" class="screen">
+      <!-- 左欄：題目、狀態與虛擬數字鍵盤 -->
+      <div class="quiz-panel-left">
+        <div>
+          <!-- 進度與計時 -->
+          <div class="quiz-status-bar">
+            <span id="progress-text" class="quiz-progress-text">第 1 / 10 題</span>
+            <div id="timer-box" class="timer-box">
+              <span>⏱️</span>
+              <span id="timer-display">20s</span>
+            </div>
+          </div>
+          <div class="progress-line-wrap">
+            <div id="progress-fill" class="progress-line-fill"></div>
+          </div>
+
+          <!-- 題目展示 -->
+          <div class="problem-card">
+            <div id="problem-formula" class="problem-formula">-- + -- = ?</div>
+          </div>
+
+          <!-- 答案輸入框 -->
+          <div id="answer-display" class="answer-display-box">?</div>
+        </div>
+
+        <!-- 虛擬數字小鍵盤 -->
+        <div class="keypad-grid">
+          <button class="key-btn" data-key="1">1</button>
+          <button class="key-btn" data-key="2">2</button>
+          <button class="key-btn" data-key="3">3</button>
+          <button class="key-btn" data-key="4">4</button>
+          <button class="key-btn" data-key="5">5</button>
+          <button class="key-btn" data-key="6">6</button>
+          <button class="key-btn" data-key="7">7</button>
+          <button class="key-btn" data-key="8">8</button>
+          <button class="key-btn" data-key="9">9</button>
+          <button class="key-btn action-btn" data-key="backspace">⌫</button>
+          <button class="key-btn" data-key="0">0</button>
+          <button class="key-btn submit-btn" data-key="enter">✓</button>
+        </div>
+      </div>
+
+      <!-- 右欄：直式手寫草稿板 -->
+      <div class="scratchpad-panel-right">
+        <!-- 工具列 -->
+        <div class="canvas-toolbar">
+          <div class="tool-group">
+            <button class="tool-btn active" data-grid="vertical">直式對齊線</button>
+            <button class="tool-btn" data-grid="grid">方格紙</button>
+            <button class="tool-btn" data-grid="blank">空白紙</button>
+          </div>
+
+          <div class="tool-group">
+            <!-- 顏色選單 -->
+            <button class="color-dot-btn active" data-color="#1e293b" style="background: #1e293b;" title="鉛筆灰黑"></button>
+            <button class="color-dot-btn" data-color="#2563eb" style="background: #2563eb;" title="鋼筆藍"></button>
+            <button class="color-dot-btn" data-color="#ef4444" style="background: #ef4444;" title="批改紅"></button>
+            <button class="color-dot-btn" data-color="#64748b" style="background: #64748b;" title="草稿灰"></button>
+          </div>
+
+          <div class="tool-group">
+            <button id="btn-stamp" class="tool-btn" title="將當前直式題目排版印在草稿紙上">📌 蓋印直式</button>
+            <button id="btn-eraser" class="tool-btn">🧽 橡皮擦</button>
+            <button id="btn-undo" class="tool-btn">↩️ 復原</button>
+            <button id="btn-clear-canvas" class="tool-btn">🗑️ 清空</button>
+          </div>
+        </div>
+
+        <!-- 畫布區塊 -->
+        <div class="canvas-container">
+          <canvas id="scratchpad-canvas"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 3. 結算畫面 ==================== -->
+    <section id="screen-result" class="screen">
+      <div class="result-card">
+        <div class="score-hero">
+          <div style="font-size: 15px; font-weight: 700; color: #047857; margin-bottom: 6px;">測驗完成！你的成績</div>
+          <h1 id="final-score">100 分</h1>
+          <div class="score-stats-grid">
+            <div class="stat-item">
+              <div class="stat-label">答對題數</div>
+              <div id="stat-correct" class="stat-val">10 / 10</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">總耗時</div>
+              <div id="stat-time" class="stat-val">85 秒</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">平均作答時間</div>
+              <div id="stat-avg-time" class="stat-val">8.5 秒</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="btn-restart" class="btn-restart">再練一次 🔄</button>
+          <button id="btn-settings" class="btn-restart" style="background: #3b82f6;">調整設定 ⚙️</button>
+          <a href="../index.html" class="btn-home">學習大廳 🏠</a>
+        </div>
+
+        <!-- 錯題與筆跡回顧 -->
+        <div class="review-section">
+          <h3 style="font-size: 17px; font-weight: 800; color: #1e293b; margin-top: 6px;">
+            作答明細與手寫計算回顧
+          </h3>
+          <div id="review-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 手寫草稿筆跡預覽 Modal -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title" style="font-size: 17px; font-weight: 700;">手寫計算草稿回顧</h3>
+        <button id="modal-close" class="nav-btn" style="padding: 4px 10px;">✕ 關閉</button>
+      </div>
+      <div class="modal-img-wrap">
+        <img id="modal-img" src="" alt="手寫草稿快照">
+      </div>
+    </div>
+  </div>
+
+  <!-- INJECT_SCRIPT -->
+</body>
+</html>

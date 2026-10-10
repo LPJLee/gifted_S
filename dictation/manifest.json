@@ -1,0 +1,22 @@
+{
+  "name": "國語生字聽寫",
+  "short_name": "國語聽寫",
+  "description": "專為 iPad + Apple Pencil 設計的國語生字田字格聽寫測驗 App",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
