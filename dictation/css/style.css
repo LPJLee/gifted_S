@@ -78,6 +78,27 @@ header.app-header {
   gap: 10px;
 }
 
+.nav-hub-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f1f5f9;
+  border: 1px solid var(--border-color);
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.nav-hub-btn:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
 .brand-icon {
   width: 36px;
   height: 36px;

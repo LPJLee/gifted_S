@@ -479,7 +479,10 @@ class QuizTimer {
 // === 直式手寫草稿板 ===
 /**
  * 直式手寫草稿板 (Scratchpad Canvas)
- * 深度適配 iPad + Apple Pencil：高頻採樣、防手掌誤觸、直式位數對齊輔助線、蓋印直式題型與筆跡快照
+ * 深度適配 iPad + Apple Pencil：
+ * 1. 240Hz 高頻採樣 (getCoalescedEvents)、落筆即時成點與即時連線 (與國語聽寫同級靈敏度)
+ * 2. 嚴格數學對齊：個位、十位、百位、千位與垂直導引虛線、欄位標籤 100% 精準對齊
+ * 3. 支援進退位輔助標註區、蓋印直式題型、橡皮擦、復原 (Undo) 與筆跡快照
  */
 
 class ScratchpadCanvas {
@@ -495,14 +498,17 @@ class ScratchpadCanvas {
       gridType: 'vertical', // 'vertical' (直式對齊線), 'grid' (方格紙), 'blank' (空白)
       penColor: '#1e293b',
       penWidth: 4,
+      baseStrokeWidth: 4,
+      pressureSensitive: true,
       penOnly: false, // 是否僅允許 Apple Pencil (防手掌誤觸)
       onStrokeEnd: null
     }, options);
 
     this.isDrawing = false;
     this.isEraser = false;
+    this.isLocked = false;
     this.currentPointerId = null;
-    this.strokes = []; // 儲存筆劃歷史支援 Undo: [ { color, width, isEraser, points: [{x,y,pressure}] } ]
+    this.strokes = []; // 儲存筆劃歷史支援 Undo: [ { color, width, isEraser, points: [{x,y,pressure,pointerType}] } ]
     this.currentStroke = [];
     this.stampedProblem = null; // 儲存蓋印的直式題目
 
@@ -522,9 +528,11 @@ class ScratchpadCanvas {
 
     this.dpr = window.devicePixelRatio || 1;
 
+    // 高解析度螢幕 (Retina iPad) 縮放設定
     this.canvas.width = Math.round(width * this.dpr);
     this.canvas.height = Math.round(height * this.dpr);
 
+    // 明確鎖定 CSS 像素尺寸
     this.canvas.style.width = width + 'px';
     this.canvas.style.height = height + 'px';
 
@@ -534,20 +542,22 @@ class ScratchpadCanvas {
   }
 
   handleResize() {
-    const prevWidth = this.cssWidth;
-    const prevHeight = this.cssHeight;
     this.initCanvasSize();
     this.render();
   }
 
   bindEvents() {
     const el = this.canvas;
+    // 使用 { passive: false } 確保 e.preventDefault() 100% 生效，防止 iOS 瀏覽器手勢攔截與中斷筆劃
     el.addEventListener('pointerdown', (e) => this.onPointerDown(e), { passive: false });
     el.addEventListener('pointermove', (e) => this.onPointerMove(e), { passive: false });
     el.addEventListener('pointerup', (e) => this.onPointerUp(e), { passive: false });
     el.addEventListener('pointercancel', (e) => this.onPointerCancel(e), { passive: false });
   }
 
+  /**
+   * 精準計算觸控/筆尖相對於 Canvas 的內部邏輯座標
+   */
   getPointerPos(e) {
     const rect = this.canvas.getBoundingClientRect();
     const scaleX = rect.width > 0 ? (this.cssWidth / rect.width) : 1;
@@ -562,6 +572,9 @@ class ScratchpadCanvas {
   }
 
   onPointerDown(e) {
+    if (this.isLocked) return;
+
+    // 若開啟「Apple Pencil 專用模式」，忽略所有手指或手掌誤觸 (touch)
     if (this.options.penOnly && e.pointerType === 'touch') {
       return;
     }
@@ -575,49 +588,50 @@ class ScratchpadCanvas {
     this.isDrawing = true;
     this.currentPointerId = e.pointerId;
 
-    const pos = this.getPointerPos(e);
-    this.currentStroke = [pos];
-    this.renderStrokeSegment(this.currentStroke, true);
+    const pt = this.getPointerPos(e);
+    this.currentStroke = [pt];
+    this.drawDot(pt); // 與聽寫 App 同樣：落筆瞬間立即畫點，絕不丟失起始筆觸！
   }
 
   onPointerMove(e) {
-    if (!this.isDrawing || e.pointerId !== this.currentPointerId) return;
+    if (!this.isDrawing || this.isLocked) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
+
     e.preventDefault();
 
-    // 取得 Apple Pencil 高頻採樣事件 (Coalesced Events)
-    let events = [e];
-    if (typeof e.getCoalescedEvents === 'function') {
-      const coalesced = e.getCoalescedEvents();
-      if (coalesced && coalesced.length > 0) {
-        events = coalesced;
-      }
-    }
+    // 關鍵升級：支援 iPad Pro/Air 240Hz 高頻採樣 (getCoalescedEvents)
+    const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
+      ? e.getCoalescedEvents()
+      : [e];
 
     for (const ev of events) {
-      const pos = this.getPointerPos(ev);
-      const lastPos = this.currentStroke[this.currentStroke.length - 1];
+      const pt = this.getPointerPos(ev);
+      const lastPt = this.currentStroke[this.currentStroke.length - 1];
 
-      if (lastPos) {
-        const dist = Math.hypot(pos.x - lastPos.x, pos.y - lastPos.y);
-        if (dist < 1.0) continue; // 過濾微小抖動
+      if (lastPt) {
+        const dx = pt.x - lastPt.x;
+        const dy = pt.y - lastPt.y;
+        // 靈敏度門檻：位移 >= 0.5 像素 (0.25) 即時繪製，極度靈敏跟筆
+        if (dx * dx + dy * dy >= 0.25) {
+          this.currentStroke.push(pt);
+          this.drawSegment(lastPt, pt);
+        }
+      } else {
+        this.currentStroke.push(pt);
       }
-
-      this.currentStroke.push(pos);
     }
-
-    this.renderStrokeSegment(this.currentStroke);
   }
 
   onPointerUp(e) {
-    if (!this.isDrawing || e.pointerId !== this.currentPointerId) return;
-    e.preventDefault();
+    if (!this.isDrawing) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
+
+    this.isDrawing = false;
+    this.currentPointerId = null;
 
     try {
       this.canvas.releasePointerCapture(e.pointerId);
     } catch (err) {}
-
-    this.isDrawing = false;
-    this.currentPointerId = null;
 
     if (this.currentStroke.length > 0) {
       this.strokes.push({
@@ -627,140 +641,118 @@ class ScratchpadCanvas {
         points: [...this.currentStroke]
       });
       this.currentStroke = [];
-      this.render(); // 完整重繪維持平滑抗鋸齒
-      if (this.options.onStrokeEnd) this.options.onStrokeEnd();
+      // 注意：不在 pointerup 時 clear 重繪，保持 60/120fps 超流暢運筆體驗！
+    }
+
+    if (this.options.onStrokeEnd) {
+      this.options.onStrokeEnd();
     }
   }
 
   onPointerCancel(e) {
-    if (e.pointerId === this.currentPointerId) {
-      this.isDrawing = false;
-      this.currentPointerId = null;
-      this.currentStroke = [];
-      this.render();
-    }
+    this.onPointerUp(e);
   }
 
   /**
-   * 即時渲染當前正在繪製的筆劃段落
+   * 繪製落筆起始圓點
    */
-  renderStrokeSegment(points, isInitial = false) {
-    if (points.length < 1) return;
+  drawDot(pt) {
     const ctx = this.ctx;
-
     ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.fillStyle = this.isEraser ? '#ffffff' : this.options.penColor;
+    ctx.beginPath();
 
-    if (this.isEraser) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = this.options.penWidth * 3.5;
-    } else {
-      ctx.strokeStyle = this.options.penColor;
-      const lastPoint = points[points.length - 1];
-      const pressureFactor = (lastPoint && lastPoint.pointerType === 'pen')
-        ? (0.6 + lastPoint.pressure * 0.8)
-        : 1.0;
-      ctx.lineWidth = this.options.penWidth * pressureFactor;
-    }
+    const baseW = this.options.penWidth || 4;
+    const radius = this.isEraser
+      ? (baseW * 4.0) / 2
+      : (baseW * (0.6 + pt.pressure * 0.8)) / 2;
 
-    if (isInitial || points.length === 1) {
-      const p = points[0];
-      ctx.fillStyle = ctx.strokeStyle;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, ctx.lineWidth / 2, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (points.length === 2) {
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-      ctx.lineTo(points[1].x, points[1].y);
-      ctx.stroke();
-    } else {
-      const p1 = points[points.length - 2];
-      const p2 = points[points.length - 1];
-      const midX = (p1.x + p2.x) / 2;
-      const midY = (p1.y + p2.y) / 2;
-
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
-      ctx.stroke();
-    }
-
+    ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
   /**
-   * 繪製完整筆劃（使用二次貝茲曲線平滑化）
+   * 即時連接相鄰兩點，支援 Apple Pencil 壓感線條寬度
    */
-  drawSmoothStroke(stroke) {
-    const points = stroke.points;
-    if (!points || points.length === 0) return;
-
+  drawSegment(p1, p2) {
     const ctx = this.ctx;
     ctx.save();
+    ctx.strokeStyle = this.isEraser ? '#ffffff' : this.options.penColor;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    if (stroke.isEraser) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = stroke.width * 3.5;
+    const baseW = this.options.penWidth || 4;
+    let lineWidth = baseW;
+    if (this.isEraser) {
+      lineWidth = baseW * 4.0;
+    } else if (this.options.pressureSensitive && p2.pointerType === 'pen') {
+      lineWidth = baseW * (0.5 + p2.pressure * 1.0);
     } else {
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.width;
+      lineWidth = baseW * 0.9;
     }
-
-    if (points.length === 1) {
-      ctx.fillStyle = ctx.strokeStyle;
-      ctx.beginPath();
-      ctx.arc(points[0].x, points[0].y, ctx.lineWidth / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      return;
-    }
+    ctx.lineWidth = lineWidth;
 
     ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-
-    for (let i = 1; i < points.length - 1; i++) {
-      const xc = (points[i].x + points[i + 1].x) / 2;
-      const yc = (points[i].y + points[i + 1].y) / 2;
-      ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-    }
-
-    const last = points[points.length - 1];
-    ctx.lineTo(last.x, last.y);
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
 
     ctx.restore();
   }
 
   /**
-   * 繪製背景格線
+   * 計算直式位數欄位的幾何座標 (千、百、十、個位 + 符號欄)
+   */
+  getColumnMetrics() {
+    const w = this.cssWidth;
+    const h = this.cssHeight;
+    const columnCount = 5; // [0: 符號, 1: 千位, 2: 百位, 3: 十位, 4: 個位]
+
+    // 依畫布寬度自適應最舒適的欄寬 (每欄 68px ~ 88px)
+    const colWidth = Math.min(88, Math.max(68, Math.floor((w - 50) / (columnCount + 1))));
+    const totalWidth = colWidth * columnCount;
+    // 水平置中偏右 (符合書寫習慣)
+    const startX = Math.round((w - totalWidth) / 2);
+
+    return {
+      w,
+      h,
+      columnCount,
+      colWidth,
+      totalWidth,
+      startX,
+      // 取得第 i 欄的中心 X 座標
+      colCenterX: (colIdx) => startX + colWidth * colIdx + colWidth / 2,
+      // 取得第 i 條隔線的 X 座標
+      lineX: (lineIdx) => startX + colWidth * lineIdx
+    };
+  }
+
+  /**
+   * 繪製背景格線 (直式位數對齊模式 / 方格紙 / 空白紙)
    */
   renderGrid() {
     const ctx = this.ctx;
     const w = this.cssWidth;
     const h = this.cssHeight;
 
-    // 底色
+    // 清空重繪純白底色
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, w, h);
 
     if (this.options.gridType === 'vertical') {
-      // === 直式對齊輔助線模式 ===
-      const columnCount = 6; // 輔助直式欄位 (萬、千、百、十、個位 + 符號欄)
-      const colWidth = Math.min(68, Math.floor(w / 7));
-      const startX = Math.max(30, w - (colWidth * columnCount) - 30);
+      const m = this.getColumnMetrics();
 
       ctx.save();
-      ctx.strokeStyle = 'rgba(203, 213, 225, 0.6)';
-      ctx.lineWidth = 1;
+
+      // 1. 垂直輔助虛線 (貫穿整個計算與答案區)
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1.2;
       ctx.setLineDash([4, 4]);
 
-      // 垂直虛線
-      for (let i = 0; i <= columnCount; i++) {
-        const x = startX + i * colWidth;
+      for (let i = 0; i <= m.columnCount; i++) {
+        const x = m.lineX(i);
         ctx.beginPath();
         ctx.moveTo(x, 15);
         ctx.lineTo(x, h - 20);
@@ -769,35 +761,53 @@ class ScratchpadCanvas {
 
       ctx.setLineDash([]); // 恢復實線
 
-      // 欄位標籤 (個、十、百、千)
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '600 13px -apple-system, sans-serif';
+      // 2. 欄位標籤：千、百、十、個
+      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'center';
-      const labels = ['', '千', '百', '十', '個'];
-      for (let i = 1; i <= labels.length; i++) {
-        const colIdx = columnCount - i;
-        const x = startX + colIdx * colWidth + colWidth / 2;
-        if (labels[labels.length - i]) {
-          ctx.fillText(labels[labels.length - i], x, 28);
-        }
+      ctx.textBaseline = 'middle';
+
+      const labels = [
+        { col: 1, text: '千', color: '#64748b' },
+        { col: 2, text: '百', color: '#059669' },
+        { col: 3, text: '十', color: '#059669' },
+        { col: 4, text: '個', color: '#059669' }
+      ];
+
+      for (const item of labels) {
+        ctx.fillStyle = item.color;
+        ctx.fillText(item.text, m.colCenterX(item.col), 34);
       }
 
-      // 進位/借位標註橫線
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.9)';
+      // 3. 標題橫向分隔線
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(startX, 36);
-      ctx.lineTo(startX + columnCount * colWidth, 36);
+      ctx.moveTo(m.startX, 54);
+      ctx.lineTo(m.startX + m.totalWidth, 54);
       ctx.stroke();
+
+      // 4. 進退位小數字標記區輔助虛線 (小朋友在上方寫進位小 1 或借位劃線)
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(m.startX, 92);
+      ctx.lineTo(m.startX + m.totalWidth, 92);
+      ctx.stroke();
+
+      ctx.font = '11px -apple-system, sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+      ctx.fillText('進退位', m.colCenterX(0), 73);
 
       ctx.restore();
 
     } else if (this.options.gridType === 'grid') {
-      // === 數學方格紙模式 ===
-      const gridSize = 28;
+      // 數學方格紙模式
+      const gridSize = 30;
       ctx.save();
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
       ctx.lineWidth = 1;
-
       ctx.beginPath();
       for (let x = 0; x <= w; x += gridSize) {
         ctx.moveTo(x, 0);
@@ -813,53 +823,111 @@ class ScratchpadCanvas {
   }
 
   /**
-   * 繪製蓋印的直式題目
+   * 繪製蓋印直式題目 (百位、十位、個位 100% 精準對齊)
    */
   renderStampedProblem() {
     if (!this.stampedProblem) return;
     const { num1, num2, op } = this.stampedProblem;
     const ctx = this.ctx;
-    const w = this.cssWidth;
+    const m = this.getColumnMetrics();
 
     ctx.save();
-    ctx.font = 'bold 36px "Courier New", monospace';
+    ctx.font = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#1e293b';
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-    // 擺在草稿紙偏右上方或適當直式計算位置
-    const colWidth = 32;
-    const rightMargin = 60;
-    const targetX = w - rightMargin;
-    const startY = 80;
+    const yRow1 = 142;     // 被加數 / 被減數 Y 座標
+    const yRow2 = 206;     // 加數 / 減數 Y 座標
+    const yCalcLine = 244; // 橫算底線 Y 座標
 
-    // 上數
-    ctx.fillText(String(num1), targetX, startY);
+    // 嚴格對位：從個位 (Col 4) 往左排列至十位 (Col 3)、百位 (Col 2)、千位 (Col 1)
+    const drawDigits = (num, y) => {
+      const s = String(num);
+      const len = s.length;
+      for (let i = 0; i < len; i++) {
+        const digitChar = s[len - 1 - i]; // i=0 為個位，i=1 為十位，i=2 為百位，i=3 為千位
+        const targetCol = 4 - i;
+        if (targetCol >= 0) {
+          ctx.fillText(digitChar, m.colCenterX(targetCol), y);
+        }
+      }
+    };
 
-    // 下數與運算子
-    ctx.fillText(String(num2), targetX, startY + 45);
-    ctx.textAlign = 'left';
-    ctx.fillText(op, targetX - (Math.max(String(num1).length, String(num2).length) + 1) * colWidth, startY + 45);
+    // 1. 繪製第一列數字
+    drawDigits(num1, yRow1);
 
-    // 橫底線
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = '#334155';
+    // 2. 繪製第二列數字
+    drawDigits(num2, yRow2);
+
+    // 3. 繪製運算符號 (放在 Col 0 符號專用欄)
+    ctx.fillStyle = '#2563eb';
+    ctx.fillText(op, m.colCenterX(0), yRow2);
+
+    // 4. 繪製直式計算橫底線
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(targetX - (Math.max(String(num1).length, String(num2).length) + 1.2) * colWidth, startY + 58);
-    ctx.lineTo(targetX + 6, startY + 58);
+    ctx.moveTo(m.startX + 6, yCalcLine);
+    ctx.lineTo(m.startX + m.totalWidth - 6, yCalcLine);
     ctx.stroke();
 
     ctx.restore();
   }
 
   /**
-   * 完整重繪畫布
+   * 重繪整個畫布 (背景格線 + 蓋印題目 + 所有歷史筆劃)
    */
   render() {
     this.renderGrid();
     this.renderStampedProblem();
 
+    // 完整重繪歷史筆劃 (用於 Undo、清除或旋轉視窗時)
     for (const stroke of this.strokes) {
-      this.drawSmoothStroke(stroke);
+      const points = stroke.points;
+      if (!points || points.length === 0) continue;
+
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color;
+      ctx.fillStyle = stroke.isEraser ? '#ffffff' : stroke.color;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (points.length === 1) {
+        ctx.beginPath();
+        const baseW = stroke.width || 4;
+        const radius = stroke.isEraser
+          ? (baseW * 4.0) / 2
+          : (baseW * (0.6 + points[0].pressure * 0.8)) / 2;
+        ctx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        continue;
+      }
+
+      for (let i = 1; i < points.length; i++) {
+        const p1 = points[i - 1];
+        const p2 = points[i];
+        const baseW = stroke.width || 4;
+        let lineWidth = baseW;
+        if (stroke.isEraser) {
+          lineWidth = baseW * 4.0;
+        } else if (this.options.pressureSensitive && p2.pointerType === 'pen') {
+          lineWidth = baseW * (0.5 + p2.pressure * 1.0);
+        } else {
+          lineWidth = baseW * 0.9;
+        }
+        ctx.lineWidth = lineWidth;
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+
+      ctx.restore();
     }
   }
 
@@ -883,18 +951,17 @@ class ScratchpadCanvas {
    * 復原上一步 (Undo)
    */
   undo() {
-    if (this.strokes.length > 0) {
-      this.strokes.pop();
-      this.render();
-      return true;
-    }
-    return false;
+    if (this.isLocked || this.strokes.length === 0) return false;
+    this.strokes.pop();
+    this.render();
+    return true;
   }
 
   /**
    * 清空所有手寫筆劃
    */
   clear() {
+    if (this.isLocked) return;
     this.strokes = [];
     this.render();
   }
