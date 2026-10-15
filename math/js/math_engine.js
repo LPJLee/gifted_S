@@ -73,104 +73,163 @@ export class MathEngine {
   }
 
   /**
-   * 根據設定決定出題數字對
+   * 根據設定與當前運算子決定出題數字對
+   * @param {string} op '+' | '-'
    */
-  pickDigits() {
+  pickDigits(op = '+') {
     let min1, max1, min2, max2;
 
     if (this.digitMode === '1') {
-      ({ min: min1, max: max1 } = this.getRange('1'));
-      ({ min: min2, max: max2 } = this.getRange('1'));
+      if (op === '-' && this.regroupMode === 'must_regroup') {
+        // 20以內退位減法 (小一標準課綱退位減法): 被減數 11~18, 減數 2~9
+        return { min1: 11, max1: 18, min2: 2, max2: 9 };
+      }
+      return { min1: 1, max1: 9, min2: 1, max2: 9 };
     } else if (this.digitMode === '2') {
-      ({ min: min1, max: max1 } = this.getRange('2'));
-      ({ min: min2, max: max2 } = this.getRange('2'));
+      return { min1: 10, max1: 99, min2: 10, max2: 99 };
     } else if (this.digitMode === '3') {
-      ({ min: min1, max: max1 } = this.getRange('3'));
-      ({ min: min2, max: max2 } = this.getRange('3'));
+      return { min1: 100, max1: 999, min2: 100, max2: 999 };
     } else if (this.digitMode === 'mixed_2_1') {
       // 二位數與一位數
-      ({ min: min1, max: max1 } = this.getRange('2'));
-      ({ min: min2, max: max2 } = this.getRange('1'));
+      return { min1: 10, max1: 99, min2: 1, max2: 9 };
     } else if (this.digitMode === 'mixed_3_2') {
       // 三位數與二位數
-      ({ min: min1, max: max1 } = this.getRange('3'));
-      ({ min: min2, max: max2 } = this.getRange('2'));
+      return { min1: 100, max1: 999, min2: 10, max2: 99 };
     } else {
       // mixed_all: 1~3 位數全部混合
-      const d1 = this.getRandomInt(1, 3);
-      const d2 = this.getRandomInt(1, d1); // 第二個數通常小於等於第一個數
-      ({ min: min1, max: max1 } = this.getRange(d1));
-      ({ min: min2, max: max2 } = this.getRange(d2));
+      let d1 = this.getRandomInt(1, 3);
+      // 若為減法且必退位，被減數至少需要 2 位數才可能退位借位
+      if (op === '-' && this.regroupMode === 'must_regroup') {
+        d1 = this.getRandomInt(2, 3);
+      }
+      const d2 = this.getRandomInt(1, d1); // 第二個數小於等於第一個數位數
+      const r1 = this.getRange(d1);
+      const r2 = this.getRange(d2);
+      return { min1: r1.min, max1: r1.max, min2: r2.min, max2: r2.max };
     }
-
-    return { min1, max1, min2, max2 };
   }
 
   /**
-   * 產生單一題目
+   * 防禦性安全題目建構 (極端重試耗盡時調用，保證數學運算 100% 正確)
    */
-  generateSingle(id = 1) {
-    let op = this.operation;
-    if (op === 'mixed') {
-      op = Math.random() < 0.5 ? '+' : '-';
-    }
-
-    const { min1, max1, min2, max2 } = this.pickDigits();
-    let num1, num2, answer;
-    let attempts = 0;
-
-    while (attempts < 200) {
-      attempts++;
-      num1 = this.getRandomInt(min1, max1);
-      num2 = this.getRandomInt(min2, max2);
-
-      if (op === '-') {
-        // 確保不出現負數 (大數減小數)
-        if (num1 < num2) {
-          const temp = num1;
-          num1 = num2;
-          num2 = temp;
-        }
-        // 避免減數為0或兩數相同導致答案為0過於平淡 (可偶爾出現但不過多)
-        if (num1 === num2 && Math.random() > 0.1) continue;
-
-        answer = num1 - num2;
-
-        if (this.regroupMode === 'no_regroup' && this.hasBorrow(num1, num2)) {
-          continue;
-        }
-        if (this.regroupMode === 'must_regroup' && !this.hasBorrow(num1, num2)) {
-          continue;
-        }
+  createFallbackQuestion(id) {
+    let op = this.operation === 'mixed' ? '+' : this.operation;
+    let num1, num2;
+    if (op === '+') {
+      if (this.regroupMode === 'no_regroup') {
+        num1 = 23; num2 = 14;
       } else {
-        answer = num1 + num2;
-
-        if (this.regroupMode === 'no_regroup' && this.hasCarry(num1, num2)) {
-          continue;
-        }
-        if (this.regroupMode === 'must_regroup' && !this.hasCarry(num1, num2)) {
-          continue;
-        }
+        num1 = 28; num2 = 15;
       }
-
-      break;
+    } else {
+      if (this.regroupMode === 'no_regroup') {
+        num1 = 35; num2 = 12;
+      } else {
+        num1 = 32; num2 = 15;
+      }
     }
-
+    const answer = op === '+' ? num1 + num2 : num1 - num2;
+    const isRegroup = op === '+' ? this.hasCarry(num1, num2) : this.hasBorrow(num1, num2);
     return {
       id,
       num1,
       num2,
       op,
       answer,
-      isRegroup: op === '+' ? this.hasCarry(num1, num2) : this.hasBorrow(num1, num2),
-      // 結構化直式呈現資訊
+      isRegroup,
       vertical: {
         top: String(num1),
         bottom: String(num2),
-        op: op,
+        op,
         maxDigits: Math.max(String(num1).length, String(num2).length, String(answer).length)
       }
     };
+  }
+
+  /**
+   * 產生單一題目
+   */
+  generateSingle(id = 1) {
+    let attempts = 0;
+
+    while (attempts < 500) {
+      attempts++;
+
+      // 1. 決定運算子
+      let op = this.operation;
+      if (op === 'mixed') {
+        op = Math.random() < 0.5 ? '+' : '-';
+      }
+
+      // 2. 根據運算子與模式決定數字範圍
+      const { min1, max1, min2, max2 } = this.pickDigits(op);
+      let num1 = this.getRandomInt(min1, max1);
+      let num2 = this.getRandomInt(min2, max2);
+
+      if (op === '-') {
+        // 確保大數減小數 (避免負數)
+        if (num1 < num2) {
+          const temp = num1;
+          num1 = num2;
+          num2 = temp;
+        }
+
+        // 避免減數為0或兩數相同導致答案為0
+        if (num1 === num2 || num2 === 0) {
+          continue;
+        }
+
+        const isBorrow = this.hasBorrow(num1, num2);
+        if (this.regroupMode === 'no_regroup' && isBorrow) {
+          continue;
+        }
+        if (this.regroupMode === 'must_regroup' && !isBorrow) {
+          continue;
+        }
+
+        const answer = num1 - num2;
+        return {
+          id,
+          num1,
+          num2,
+          op,
+          answer,
+          isRegroup: isBorrow,
+          vertical: {
+            top: String(num1),
+            bottom: String(num2),
+            op: op,
+            maxDigits: Math.max(String(num1).length, String(num2).length, String(answer).length)
+          }
+        };
+      } else {
+        const isCarry = this.hasCarry(num1, num2);
+        if (this.regroupMode === 'no_regroup' && isCarry) {
+          continue;
+        }
+        if (this.regroupMode === 'must_regroup' && !isCarry) {
+          continue;
+        }
+
+        const answer = num1 + num2;
+        return {
+          id,
+          num1,
+          num2,
+          op,
+          answer,
+          isRegroup: isCarry,
+          vertical: {
+            top: String(num1),
+            bottom: String(num2),
+            op: op,
+            maxDigits: Math.max(String(num1).length, String(num2).length, String(answer).length)
+          }
+        };
+      }
+    }
+
+    return this.createFallbackQuestion(id);
   }
 
   /**
