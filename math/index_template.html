@@ -19,6 +19,7 @@
       <span class="nav-title">🧮 數學直式加減</span>
     </div>
     <div class="nav-right">
+      <button id="btn-history" class="nav-btn" title="查看歷次測驗分數與平均答題秒數">📜 歷次紀錄</button>
       <button id="btn-pen-only" class="nav-btn" title="防手掌誤觸：開啟後僅 Apple Pencil 可書寫">✏️ Pencil 專用</button>
       <button id="btn-mute" class="nav-btn">🔊 音效</button>
     </div>
@@ -113,6 +114,20 @@
         <button id="btn-start" class="btn-start-quiz">
           開始測驗 🚀
         </button>
+
+        <!-- 歷次作答歷史紀錄卡片 -->
+        <div class="history-summary-card">
+          <div class="history-card-header">
+            <div class="history-card-title">
+              <span>📊 答題歷史紀錄</span>
+              <span id="history-badge-count" class="badge-count">0 次練習</span>
+            </div>
+            <button id="btn-view-all-history" class="btn-text-action" type="button">查看全部 ➔</button>
+          </div>
+          <div id="setup-history-preview" class="history-preview-list">
+            <!-- 動態載入最近紀錄 -->
+          </div>
+        </div>
       </div>
     </section>
 
@@ -216,6 +231,7 @@
 
         <div class="result-actions">
           <button id="btn-restart" class="btn-restart">再練一次 🔄</button>
+          <button id="btn-result-history" class="btn-restart" style="background: #0284c7;">歷次紀錄 📜</button>
           <button id="btn-settings" class="btn-restart" style="background: #3b82f6;">調整設定 ⚙️</button>
           <a href="../index.html" class="btn-home">學習大廳 🏠</a>
         </div>
@@ -240,6 +256,48 @@
       </div>
       <div class="modal-img-wrap">
         <img id="modal-img" src="" alt="手寫草稿快照">
+      </div>
+    </div>
+  </div>
+
+  <!-- 答題歷史紀錄 Modal -->
+  <div id="modal-history-overlay" class="modal-overlay">
+    <div class="modal-card modal-history-card">
+      <div class="modal-header">
+        <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+          <span>📜</span> 歷次答題歷史紀錄
+        </h3>
+        <button id="modal-history-close" class="nav-btn" style="padding: 4px 10px;">✕ 關閉</button>
+      </div>
+
+      <!-- 統計摘要列 -->
+      <div class="history-overview-stats">
+        <div class="hist-stat-box">
+          <div class="hist-stat-val" id="hist-total-count">0</div>
+          <div class="hist-stat-lbl">練習次數</div>
+        </div>
+        <div class="hist-stat-box">
+          <div class="hist-stat-val" id="hist-avg-score">0 分</div>
+          <div class="hist-stat-lbl">平均成績</div>
+        </div>
+        <div class="hist-stat-box">
+          <div class="hist-stat-val" id="hist-avg-speed">0 秒</div>
+          <div class="hist-stat-lbl">平均每題速度</div>
+        </div>
+        <div class="hist-stat-box">
+          <div class="hist-stat-val" id="hist-best-score">0 分</div>
+          <div class="hist-stat-lbl">最佳成績</div>
+        </div>
+      </div>
+
+      <!-- 歷史紀錄列表 -->
+      <div id="modal-history-list" class="history-scroll-list">
+        <!-- 動態渲染每一筆歷史紀錄 -->
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-light); padding-top: 12px; margin-top: 4px;">
+        <button id="btn-clear-history" class="btn-clear-history">🗑️ 清除所有紀錄</button>
+        <button id="modal-history-close-btn" class="nav-btn" style="background: #10b981; color: white; border: none; padding: 7px 18px; font-weight: 700;">確定</button>
       </div>
     </div>
   </div>

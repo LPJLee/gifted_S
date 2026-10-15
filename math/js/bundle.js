@@ -1109,6 +1109,7 @@ class MathApp {
     this.initDOM();
     this.bindEvents();
     this.initCanvas();
+    this.renderHistoryPreview();
   }
 
   initDOM() {
@@ -1131,6 +1132,24 @@ class MathApp {
     this.statTime = document.getElementById('stat-time');
     this.statAvgTime = document.getElementById('stat-avg-time');
     this.reviewList = document.getElementById('review-list');
+    this.btnResultHistory = document.getElementById('btn-result-history');
+
+    // 歷史紀錄相關元件
+    this.btnHistory = document.getElementById('btn-history');
+    this.btnViewAllHistory = document.getElementById('btn-view-all-history');
+    this.historyBadgeCount = document.getElementById('history-badge-count');
+    this.setupHistoryPreview = document.getElementById('setup-history-preview');
+
+    this.modalHistoryOverlay = document.getElementById('modal-history-overlay');
+    this.modalHistoryClose = document.getElementById('modal-history-close');
+    this.modalHistoryCloseBtn = document.getElementById('modal-history-close-btn');
+    this.modalHistoryList = document.getElementById('modal-history-list');
+    this.btnClearHistory = document.getElementById('btn-clear-history');
+
+    this.histTotalCount = document.getElementById('hist-total-count');
+    this.histAvgScore = document.getElementById('hist-avg-score');
+    this.histAvgSpeed = document.getElementById('hist-avg-speed');
+    this.histBestScore = document.getElementById('hist-best-score');
 
     // 手寫筆跡 Modal
     this.modalOverlay = document.getElementById('modal-overlay');
@@ -1339,6 +1358,33 @@ class MathApp {
         }
       });
     }
+
+    // === 歷史紀錄 Modal 事件 ===
+    if (this.btnHistory) {
+      this.btnHistory.addEventListener('click', () => this.openHistoryModal());
+    }
+    if (this.btnViewAllHistory) {
+      this.btnViewAllHistory.addEventListener('click', () => this.openHistoryModal());
+    }
+    if (this.btnResultHistory) {
+      this.btnResultHistory.addEventListener('click', () => this.openHistoryModal());
+    }
+    if (this.modalHistoryClose) {
+      this.modalHistoryClose.addEventListener('click', () => this.closeHistoryModal());
+    }
+    if (this.modalHistoryCloseBtn) {
+      this.modalHistoryCloseBtn.addEventListener('click', () => this.closeHistoryModal());
+    }
+    if (this.modalHistoryOverlay) {
+      this.modalHistoryOverlay.addEventListener('click', (e) => {
+        if (e.target === this.modalHistoryOverlay) {
+          this.closeHistoryModal();
+        }
+      });
+    }
+    if (this.btnClearHistory) {
+      this.btnClearHistory.addEventListener('click', () => this.clearAllHistory());
+    }
   }
 
   showScreen(name) {
@@ -1512,6 +1558,27 @@ class MathApp {
       sound.playFanfare();
     }
 
+    // 儲存至歷次作答歷史紀錄 (分數、平均答題秒數、模式設定)
+    const historyItem = {
+      id: Date.now().toString(),
+      timestamp: Date.now(),
+      dateStr: this.formatDate(new Date()),
+      score: scorePct,
+      correctCount: correctCount,
+      totalCount: total,
+      totalTimeSec: totalTimeSec,
+      avgTimeSec: parseFloat(avgTimeSec),
+      digitMode: this.config.digitMode,
+      digitModeLabel: this.getDigitModeLabel(this.config.digitMode),
+      operation: this.config.operation,
+      operationLabel: this.getOperationLabel(this.config.operation),
+      regroupMode: this.config.regroupMode,
+      regroupModeLabel: this.getRegroupLabel(this.config.regroupMode),
+      modeSummary: `${this.getDigitModeLabel(this.config.digitMode)} · ${this.getOperationLabel(this.config.operation)} · ${this.getRegroupLabel(this.config.regroupMode)}`
+    };
+    this.addHistoryEntry(historyItem);
+    this.renderHistoryPreview();
+
     // 渲染作答明細與錯題筆跡回顧
     this.reviewList.innerHTML = '';
     this.records.forEach((rec, idx) => {
@@ -1557,6 +1624,186 @@ class MathApp {
       item.appendChild(rightDiv);
       this.reviewList.appendChild(item);
     });
+  }
+
+  // =========================================
+  // 歷史紀錄核心資料管理與渲染模組
+  // =========================================
+
+  getHistory() {
+    try {
+      const saved = localStorage.getItem('math_quiz_history_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Failed to load history:', e);
+      return [];
+    }
+  }
+
+  saveHistory(list) {
+    try {
+      localStorage.setItem('math_quiz_history_v1', JSON.stringify(list));
+    } catch (e) {
+      console.error('Failed to save history:', e);
+    }
+  }
+
+  addHistoryEntry(entry) {
+    const list = this.getHistory();
+    list.unshift(entry);
+    if (list.length > 100) list.length = 100; // 最多保存 100 筆
+    this.saveHistory(list);
+  }
+
+  clearAllHistory() {
+    if (confirm('確定要清除所有測驗歷史紀錄嗎？清除後無法復原。')) {
+      sound.playTap();
+      localStorage.removeItem('math_quiz_history_v1');
+      this.renderHistoryPreview();
+      this.renderHistoryModal();
+    }
+  }
+
+  getDigitModeLabel(mode) {
+    const map = {
+      '1': '一位數',
+      '2': '二位數',
+      '3': '三位數',
+      'mixed_2_1': '二位±一位',
+      'mixed_3_2': '三位±二位',
+      'mixed_all': '全隨機'
+    };
+    return map[mode] || mode;
+  }
+
+  getOperationLabel(op) {
+    const map = {
+      '+': '加法 (+)',
+      '-': '減法 (-)',
+      'mixed': '加減混合 (±)'
+    };
+    return map[op] || op;
+  }
+
+  getRegroupLabel(mode) {
+    const map = {
+      'all': '隨機進退',
+      'no_regroup': '不進退位',
+      'must_regroup': '必進退位'
+    };
+    return map[mode] || mode;
+  }
+
+  formatDate(d) {
+    const m = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    const h = d.getHours().toString().padStart(2, '0');
+    const min = d.getMinutes().toString().padStart(2, '0');
+    return `${m}/${day} ${h}:${min}`;
+  }
+
+  renderHistoryItem(item) {
+    const el = document.createElement('div');
+    el.className = 'history-item';
+
+    let scoreClass = 'hist-score-mid';
+    if (item.score === 100) scoreClass = 'hist-score-perfect';
+    else if (item.score >= 80) scoreClass = 'hist-score-high';
+    else if (item.score < 60) scoreClass = 'hist-score-low';
+
+    el.innerHTML = `
+      <div class="history-item-left">
+        <div class="history-meta-row">
+          <span class="history-date">📅 ${item.dateStr}</span>
+          <span class="history-tag">${item.modeSummary || item.digitModeLabel || '數學運算'}</span>
+        </div>
+        <div class="history-detail-text">
+          答對 <strong>${item.correctCount} / ${item.totalCount}</strong> 題（耗時 ${item.totalTimeSec} 秒）
+        </div>
+      </div>
+      <div class="history-item-right">
+        <div class="hist-score-badge ${scoreClass}">${item.score} 分</div>
+        <div class="hist-speed-badge">⚡ ${item.avgTimeSec} 秒/題</div>
+      </div>
+    `;
+    return el;
+  }
+
+  renderHistoryPreview() {
+    if (!this.setupHistoryPreview) return;
+    const history = this.getHistory();
+    if (this.historyBadgeCount) {
+      this.historyBadgeCount.textContent = `${history.length} 次練習`;
+    }
+
+    this.setupHistoryPreview.innerHTML = '';
+    if (history.length === 0) {
+      this.setupHistoryPreview.innerHTML = `
+        <div class="history-empty-box">
+          尚無測驗紀錄。完成測驗後，您的分數與平均作答秒數將自動記錄在此！
+        </div>
+      `;
+      return;
+    }
+
+    // 顯示最新 3 筆預覽
+    const previewItems = history.slice(0, 3);
+    previewItems.forEach(item => {
+      this.setupHistoryPreview.appendChild(this.renderHistoryItem(item));
+    });
+  }
+
+  renderHistoryModal() {
+    const history = this.getHistory();
+    const total = history.length;
+
+    if (total === 0) {
+      if (this.histTotalCount) this.histTotalCount.textContent = '0';
+      if (this.histAvgScore) this.histAvgScore.textContent = '0 分';
+      if (this.histAvgSpeed) this.histAvgSpeed.textContent = '0 秒';
+      if (this.histBestScore) this.histBestScore.textContent = '0 分';
+      if (this.modalHistoryList) {
+        this.modalHistoryList.innerHTML = `
+          <div class="history-empty-box" style="padding: 30px;">
+            目前尚無任何練習歷史紀錄。請開始一次測驗！
+          </div>
+        `;
+      }
+      return;
+    }
+
+    const totalScore = history.reduce((acc, r) => acc + r.score, 0);
+    const avgScore = Math.round(totalScore / total);
+    const totalSpeed = history.reduce((acc, r) => acc + (parseFloat(r.avgTimeSec) || 0), 0);
+    const avgSpeed = (totalSpeed / total).toFixed(1);
+    const bestScore = Math.max(...history.map(r => r.score));
+
+    if (this.histTotalCount) this.histTotalCount.textContent = String(total);
+    if (this.histAvgScore) this.histAvgScore.textContent = `${avgScore} 分`;
+    if (this.histAvgSpeed) this.histAvgSpeed.textContent = `${avgSpeed} 秒`;
+    if (this.histBestScore) this.histBestScore.textContent = `${bestScore} 分`;
+
+    if (this.modalHistoryList) {
+      this.modalHistoryList.innerHTML = '';
+      history.forEach(item => {
+        this.modalHistoryList.appendChild(this.renderHistoryItem(item));
+      });
+    }
+  }
+
+  openHistoryModal() {
+    sound.playTap();
+    this.renderHistoryModal();
+    if (this.modalHistoryOverlay) {
+      this.modalHistoryOverlay.classList.add('active');
+    }
+  }
+
+  closeHistoryModal() {
+    sound.playTap();
+    if (this.modalHistoryOverlay) {
+      this.modalHistoryOverlay.classList.remove('active');
+    }
   }
 }
 
