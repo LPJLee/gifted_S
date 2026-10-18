@@ -903,6 +903,35 @@ body {
   gap: 3px;
 }
 
+.btn-delete-single-history {
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-delete-single-history:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+  transform: scale(1.06);
+}
+
+.btn-delete-single-history:active {
+  transform: scale(0.95);
+  background: #fee2e2;
+}
+
 .history-empty-box {
   padding: 20px;
   text-align: center;
@@ -3810,6 +3839,17 @@ class MathApp {
     }
   }
 
+  deleteHistoryEntry(targetId) {
+    if (confirm('確定要刪除這筆測驗紀錄嗎？')) {
+      sound.playTap();
+      const list = this.getHistory();
+      const updated = list.filter(r => String(r.id || r.timestamp) !== String(targetId));
+      this.saveHistory(updated);
+      this.renderHistoryPreview();
+      this.renderHistoryModal();
+    }
+  }
+
   getDigitModeLabel(mode) {
     const map = {
       '1': '一位數',
@@ -3871,7 +3911,17 @@ class MathApp {
         <div class="hist-score-badge ${scoreClass}">${item.score} 分</div>
         <div class="hist-speed-badge">⚡ ${item.avgTimeSec} 秒/題</div>
       </div>
+      <button class="btn-delete-single-history" type="button" title="刪除此筆紀錄" aria-label="刪除此筆紀錄">🗑️</button>
     `;
+
+    const btnDelete = el.querySelector('.btn-delete-single-history');
+    if (btnDelete) {
+      btnDelete.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.deleteHistoryEntry(item.id || item.timestamp);
+      });
+    }
+
     return el;
   }
 

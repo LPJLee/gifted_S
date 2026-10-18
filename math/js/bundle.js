@@ -2042,6 +2042,17 @@ class MathApp {
     }
   }
 
+  deleteHistoryEntry(targetId) {
+    if (confirm('確定要刪除這筆測驗紀錄嗎？')) {
+      sound.playTap();
+      const list = this.getHistory();
+      const updated = list.filter(r => String(r.id || r.timestamp) !== String(targetId));
+      this.saveHistory(updated);
+      this.renderHistoryPreview();
+      this.renderHistoryModal();
+    }
+  }
+
   getDigitModeLabel(mode) {
     const map = {
       '1': '一位數',
@@ -2103,7 +2114,17 @@ class MathApp {
         <div class="hist-score-badge ${scoreClass}">${item.score} 分</div>
         <div class="hist-speed-badge">⚡ ${item.avgTimeSec} 秒/題</div>
       </div>
+      <button class="btn-delete-single-history" type="button" title="刪除此筆紀錄" aria-label="刪除此筆紀錄">🗑️</button>
     `;
+
+    const btnDelete = el.querySelector('.btn-delete-single-history');
+    if (btnDelete) {
+      btnDelete.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.deleteHistoryEntry(item.id || item.timestamp);
+      });
+    }
+
     return el;
   }
 

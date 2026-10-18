@@ -891,6 +891,35 @@ body {
   gap: 3px;
 }
 
+.btn-delete-single-history {
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-delete-single-history:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+  transform: scale(1.06);
+}
+
+.btn-delete-single-history:active {
+  transform: scale(0.95);
+  background: #fee2e2;
+}
+
 .history-empty-box {
   padding: 20px;
   text-align: center;
