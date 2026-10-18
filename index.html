@@ -44,7 +44,7 @@
 
     .container {
       width: 100%;
-      max-width: 960px;
+      max-width: 1140px;
       margin: 0 auto;
     }
 
@@ -123,6 +123,10 @@
       background: linear-gradient(90deg, #3b82f6, #60a5fa);
     }
 
+    .card-exam::before {
+      background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+    }
+
     .card-math::before {
       background: linear-gradient(90deg, #10b981, #34d399);
     }
@@ -143,6 +147,12 @@
       background: #eff6ff;
       color: #2563eb;
       border: 1px solid #bfdbfe;
+    }
+
+    .icon-exam {
+      background: #f5f3ff;
+      color: #7c3aed;
+      border: 1px solid #ddd6fe;
     }
 
     .icon-math {
@@ -187,6 +197,11 @@
       color: #166534;
     }
 
+    .card-exam .tag {
+      background: #f5f3ff;
+      color: #5b21b6;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -210,6 +225,15 @@
     .btn-dictation:hover {
       background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
       box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-exam {
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    }
+
+    .btn-exam:hover {
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
     }
 
     .btn-math {
@@ -267,23 +291,45 @@
         </a>
       </div>
 
-      <!-- 數學直式加減 Card -->
-      <div class="card card-math">
+      <!-- 數學總時長模擬測驗 Card (新開功能) -->
+      <div class="card card-exam">
         <div>
-          <div class="icon-wrapper icon-math">🧮</div>
-          <h2>數學直式加減</h2>
+          <div class="icon-wrapper icon-exam">⏱️</div>
+          <h2>數學模擬測驗 (總時長)</h2>
           <p class="card-desc">
-            1 ~ 3 位數加減法練習，支援自訂題數與每題倒數秒數。配備專屬 Apple Pencil 直式手寫草稿板與對齊隔線，保留錯題手寫筆跡回顧！
+            自訂測驗題數與全卷總時長！過程中可自由切換前後題目與跳題，寫完後提供交卷前總覽清單檢查，確定交卷後統一批改對錯。
           </p>
           <div class="tags">
-            <span class="tag">1~3位數加減</span>
-            <span class="tag">自訂題數/時間</span>
-            <span class="tag">直式手寫草稿</span>
-            <span class="tag">錯題筆跡分析</span>
+            <span class="tag">自訂題數/總時長</span>
+            <span class="tag">可選前後題</span>
+            <span class="tag">交卷前總覽檢查</span>
+            <span class="tag">統一評估對錯</span>
+            <span class="tag">直式草稿板</span>
           </div>
         </div>
-        <a href="./math/index.html" class="btn btn-math">
-          進入數學練習 ➔
+        <a href="./math/index.html?mode=exam" class="btn btn-exam">
+          進入總時長測驗 ➔
+        </a>
+      </div>
+
+      <!-- 數學直式速算 Card (單題速算) -->
+      <div class="card card-math">
+        <div>
+          <div class="icon-wrapper icon-math">⚡</div>
+          <h2>數學直式速算 (單題)</h2>
+          <p class="card-desc">
+            1 ~ 3 位數加減法練習，每題獨立倒數計時。輸入答案即時判定對錯，節奏緊湊訓練計算反應，配備專屬手寫草稿板與歷次統計！
+          </p>
+          <div class="tags">
+            <span class="tag">每題獨立計時</span>
+            <span class="tag">即刻判定對錯</span>
+            <span class="tag">1~3位數加減</span>
+            <span class="tag">直式手寫草稿</span>
+            <span class="tag">答題歷史分析</span>
+          </div>
+        </div>
+        <a href="./math/index.html?mode=speed" class="btn btn-math">
+          進入單題速算 ➔
         </a>
       </div>
     </div>

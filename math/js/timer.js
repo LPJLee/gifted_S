@@ -98,6 +98,14 @@ export class QuizTimer {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
+  getRemaining() {
+    return this.remainingSeconds;
+  }
+
+  getElapsed() {
+    return this.elapsedSeconds;
+  }
+
   stop() {
     if (this.timerId) {
       clearInterval(this.timerId);

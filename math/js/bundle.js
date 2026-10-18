@@ -525,6 +525,14 @@ class QuizTimer {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
+  getRemaining() {
+    return this.remainingSeconds;
+  }
+
+  getElapsed() {
+    return this.elapsedSeconds;
+  }
+
   stop() {
     if (this.timerId) {
       clearInterval(this.timerId);
@@ -1026,6 +1034,22 @@ class ScratchpadCanvas {
   }
 
   /**
+   * 取得手寫筆劃資料副本 (用於題目切換保存)
+   */
+  getStrokes() {
+    return JSON.parse(JSON.stringify(this.strokes));
+  }
+
+  /**
+   * 載入指定筆劃資料與蓋印題目
+   */
+  loadStrokes(strokes = [], stampedProblem = null) {
+    this.strokes = strokes ? JSON.parse(JSON.stringify(strokes)) : [];
+    this.stampedProblem = stampedProblem || null;
+    this.render();
+  }
+
+  /**
    * 設定畫筆顏色
    */
   setPenColor(color) {
@@ -1090,8 +1114,10 @@ class MathApp {
 
     // 測驗設定狀態
     this.config = {
+      mode: 'exam', // 'exam' (總時長測驗模式) | 'speed' (單題速算挑戰)
       questionCount: 10,
-      timerSeconds: 20,
+      totalTime: 180, // 總時長秒數 (180 = 3分鐘, 0 = 不限時)
+      timerSeconds: 20, // 單題速算秒數
       digitMode: '2',
       operation: '+',
       regroupMode: 'all',
@@ -1103,20 +1129,40 @@ class MathApp {
     this.currentIndex = 0;
     this.currentInput = '';
     this.records = []; // { question, userAnswer, isCorrect, timeSpent, snapshot }
+    this.quizStartTime = 0;
     this.questionStartTime = 0;
     this.isLocked = false;
 
+    this.checkUrlParams();
     this.initDOM();
     this.bindEvents();
     this.initCanvas();
+    this.updateModeUI();
     this.renderHistoryPreview();
   }
 
+  checkUrlParams() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const m = params.get('mode');
+      if (m === 'speed' || m === 'exam') {
+        this.config.mode = m;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   initDOM() {
-    // 畫面
+    // 畫面區塊
     this.screenSetup = document.getElementById('screen-setup');
     this.screenQuiz = document.getElementById('screen-quiz');
+    this.screenReview = document.getElementById('screen-review');
     this.screenResult = document.getElementById('screen-result');
+
+    // 設定區元件
+    this.settingGroupTotalTime = document.getElementById('setting-group-total-time');
+    this.settingGroupSpeedTime = document.getElementById('setting-group-speed-time');
 
     // 作答區
     this.progressText = document.getElementById('progress-text');
@@ -1125,6 +1171,22 @@ class MathApp {
     this.timerBox = document.getElementById('timer-box');
     this.problemFormula = document.getElementById('problem-formula');
     this.answerDisplay = document.getElementById('answer-display');
+
+    // 題號快捷列與題目導航 (總時長測驗模式)
+    this.examNavBar = document.getElementById('exam-nav-bar');
+    this.examPillStrip = document.getElementById('exam-pill-strip');
+    this.btnQuizPrev = document.getElementById('btn-quiz-prev');
+    this.btnQuizNext = document.getElementById('btn-quiz-next');
+    this.btnQuizReview = document.getElementById('btn-quiz-review');
+
+    // 總時長交卷前總覽核對畫面元件
+    this.reviewTimerDisplay = document.getElementById('review-timer-display');
+    this.reviewAnsweredStat = document.getElementById('review-answered-stat');
+    this.reviewUnansweredAlert = document.getElementById('review-unanswered-alert');
+    this.reviewUnansweredCount = document.getElementById('review-unanswered-count');
+    this.reviewItemsContainer = document.getElementById('review-items-container');
+    this.btnReviewBack = document.getElementById('btn-review-back');
+    this.btnReviewConfirmSubmit = document.getElementById('btn-review-confirm-submit');
 
     // 結算區
     this.finalScore = document.getElementById('final-score');
@@ -1174,7 +1236,30 @@ class MathApp {
     }
   }
 
+  updateModeUI() {
+    // 依當前 mode 同步 Tab 外觀與時間設定顯示
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.mode === this.config.mode);
+    });
+
+    if (this.settingGroupTotalTime) {
+      this.settingGroupTotalTime.style.display = (this.config.mode === 'exam') ? 'block' : 'none';
+    }
+    if (this.settingGroupSpeedTime) {
+      this.settingGroupSpeedTime.style.display = (this.config.mode === 'speed') ? 'block' : 'none';
+    }
+  }
+
   bindEvents() {
+    // === 測驗模式切換 ===
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        sound.playTap();
+        this.config.mode = tab.dataset.mode;
+        this.updateModeUI();
+      });
+    });
+
     // === 設定選項按鈕切換 ===
     document.querySelectorAll('.opt-pill-group').forEach(group => {
       const field = group.dataset.field;
@@ -1185,14 +1270,15 @@ class MathApp {
           btn.classList.add('active');
 
           const val = btn.dataset.val;
+          const inputWrap = group.parentElement.querySelector('.custom-input-wrap');
+
           if (val === 'custom') {
-            const inputWrap = group.parentElement.querySelector('.custom-input-wrap');
             if (inputWrap) inputWrap.style.display = 'flex';
           } else {
-            const inputWrap = group.parentElement.querySelector('.custom-input-wrap');
             if (inputWrap) inputWrap.style.display = 'none';
 
             if (field === 'questionCount') this.config.questionCount = parseInt(val, 10);
+            if (field === 'totalTime') this.config.totalTime = parseInt(val, 10);
             if (field === 'timerSeconds') this.config.timerSeconds = parseInt(val, 10);
             if (field === 'digitMode') this.config.digitMode = val;
             if (field === 'operation') this.config.operation = val;
@@ -1202,7 +1288,7 @@ class MathApp {
       });
     });
 
-    // 自訂輸入框連動
+    // 自訂題數輸入框連動
     const customCountInput = document.getElementById('custom-count-input');
     if (customCountInput) {
       customCountInput.addEventListener('input', (e) => {
@@ -1211,6 +1297,28 @@ class MathApp {
       });
     }
 
+    // 自訂總時長輸入連動
+    const customTotalTimeInput = document.getElementById('custom-total-time-input');
+    const customTotalTimeUnit = document.getElementById('custom-total-time-unit');
+    const customTotalTimeHint = document.getElementById('custom-total-time-hint');
+
+    const updateTotalTimeFromCustom = () => {
+      const val = parseInt(customTotalTimeInput.value, 10) || 1;
+      const unit = customTotalTimeUnit ? customTotalTimeUnit.value : 'min';
+      const sec = unit === 'min' ? val * 60 : val;
+      this.config.totalTime = sec;
+      if (customTotalTimeHint) {
+        customTotalTimeHint.textContent = `(即 ${sec} 秒)`;
+      }
+    };
+    if (customTotalTimeInput) {
+      customTotalTimeInput.addEventListener('input', updateTotalTimeFromCustom);
+    }
+    if (customTotalTimeUnit) {
+      customTotalTimeUnit.addEventListener('change', updateTotalTimeFromCustom);
+    }
+
+    // 自訂單題秒數輸入框連動
     const customTimeInput = document.getElementById('custom-time-input');
     if (customTimeInput) {
       customTimeInput.addEventListener('input', (e) => {
@@ -1258,6 +1366,48 @@ class MathApp {
       });
     }
 
+    // === 總時長測驗模式導航列按鈕 ===
+    if (this.btnQuizPrev) {
+      this.btnQuizPrev.addEventListener('click', () => {
+        sound.playTap();
+        this.prevQuestion();
+      });
+    }
+    if (this.btnQuizNext) {
+      this.btnQuizNext.addEventListener('click', () => {
+        sound.playTap();
+        this.nextQuestion();
+      });
+    }
+    if (this.btnQuizReview) {
+      this.btnQuizReview.addEventListener('click', () => {
+        sound.playTap();
+        this.enterExamReview();
+      });
+    }
+
+    // === 交卷前總覽畫面按鈕 ===
+    if (this.btnReviewBack) {
+      this.btnReviewBack.addEventListener('click', () => {
+        sound.playTap();
+        this.showScreen('quiz');
+        this.loadQuestion(this.currentIndex);
+      });
+    }
+    if (this.btnReviewConfirmSubmit) {
+      this.btnReviewConfirmSubmit.addEventListener('click', () => {
+        sound.playTap();
+        const unanswered = this.questions.filter(q => q.userAnswer === '').length;
+        if (unanswered > 0) {
+          if (confirm(`尚有 ${unanswered} 題未填寫答案，確定要交卷嗎？`)) {
+            this.confirmSubmitExam();
+          }
+        } else {
+          this.confirmSubmitExam();
+        }
+      });
+    }
+
     // === 虛擬數字小鍵盤按鈕 ===
     document.querySelectorAll('.key-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1270,7 +1420,7 @@ class MathApp {
 
     // 實體鍵盤支援
     window.addEventListener('keydown', (e) => {
-      if (this.screenQuiz.classList.contains('active')) {
+      if (this.screenQuiz && this.screenQuiz.classList.contains('active')) {
         if (e.key >= '0' && e.key <= '9') {
           this.handleKeyInput(e.key);
         } else if (e.key === 'Backspace') {
@@ -1279,12 +1429,15 @@ class MathApp {
           this.handleKeyInput('enter');
         } else if (e.key === 'Escape') {
           this.handleKeyInput('clear');
+        } else if (e.key === 'ArrowLeft') {
+          if (this.config.mode === 'exam') this.prevQuestion();
+        } else if (e.key === 'ArrowRight') {
+          if (this.config.mode === 'exam') this.nextQuestion();
         }
       }
     });
 
     // === 直式草稿板工具按鈕 ===
-    // 格線模式切換
     document.querySelectorAll('[data-grid]').forEach(btn => {
       btn.addEventListener('click', () => {
         sound.playTap();
@@ -1390,6 +1543,7 @@ class MathApp {
   showScreen(name) {
     this.screenSetup.classList.remove('active');
     this.screenQuiz.classList.remove('active');
+    if (this.screenReview) this.screenReview.classList.remove('active');
     this.screenResult.classList.remove('active');
 
     if (name === 'setup') this.screenSetup.classList.add('active');
@@ -1399,61 +1553,187 @@ class MathApp {
         if (this.canvas) this.canvas.handleResize();
       }, 50);
     }
+    if (name === 'review') {
+      if (this.screenReview) this.screenReview.classList.add('active');
+    }
     if (name === 'result') this.screenResult.classList.add('active');
   }
 
   startQuiz() {
     const engine = new MathEngine(this.config);
-    this.questions = engine.generateQuiz();
+    const rawQuestions = engine.generateQuiz();
+
+    this.questions = rawQuestions.map((q, idx) => ({
+      index: idx,
+      num1: q.num1,
+      num2: q.num2,
+      op: q.op,
+      answer: q.answer,
+      userAnswer: '',
+      strokes: [],
+      snapshot: null
+    }));
+
     this.currentIndex = 0;
     this.records = [];
     this.currentInput = '';
     this.isLocked = false;
+    this.quizStartTime = Date.now();
+
+    // 依模式更新導航列顯隱
+    if (this.examNavBar) {
+      this.examNavBar.style.display = (this.config.mode === 'exam') ? 'flex' : 'none';
+    }
+
+    if (this.config.mode === 'exam') {
+      this.renderExamPillStrip();
+      this.startTotalTimer();
+    }
 
     this.showScreen('quiz');
     this.loadQuestion(0);
   }
 
-  loadQuestion(index) {
-    if (index >= this.questions.length) {
-      this.finishQuiz();
-      return;
-    }
-
-    this.currentIndex = index;
-    this.currentInput = '';
-    this.isLocked = false;
-    this.updateAnswerDisplay();
-
-    const q = this.questions[index];
-    this.problemFormula.textContent = `${q.num1} ${q.op} ${q.num2} = ?`;
-    this.progressText.textContent = `第 ${index + 1} / ${this.questions.length} 題`;
-    this.progressFill.style.width = `${((index + 1) / this.questions.length) * 100}%`;
-
-    // 清空手寫板，或預設蓋印直式題目輔助計算
-    if (this.canvas) {
-      this.canvas.clear();
-      this.canvas.clearStampedProblem();
-      this.canvas.stampProblem(q);
-    }
-
-    // 啟動計時器
-    this.questionStartTime = Date.now();
+  startTotalTimer() {
     this.timerBox.classList.remove('warning');
+    const totalSec = this.config.totalTime;
 
     this.timer.start(
-      this.config.timerSeconds,
+      totalSec,
       (state) => {
-        this.timerDisplay.textContent = state.isCountdown ? `${state.remaining}s` : state.formatted;
+        const timeStr = state.isCountdown ? state.formatted : state.formatted;
+        this.timerDisplay.textContent = timeStr;
+        if (this.reviewTimerDisplay) {
+          this.reviewTimerDisplay.textContent = timeStr;
+        }
       },
       (rem) => {
         this.timerBox.classList.add('warning');
         sound.playTick();
       },
       () => {
-        this.handleTimeout();
+        this.handleExamTimeout();
       }
     );
+  }
+
+  handleExamTimeout() {
+    sound.playTimeout();
+    this.saveCurrentQuestionState();
+    alert('⏱️ 測驗總時間已到！即將進入作答總覽核對。');
+    this.enterExamReview();
+  }
+
+  renderExamPillStrip() {
+    if (!this.examPillStrip) return;
+    this.examPillStrip.innerHTML = '';
+    this.questions.forEach((q, idx) => {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'exam-pill';
+      pill.textContent = idx + 1;
+      pill.dataset.idx = idx;
+      if (idx === this.currentIndex) pill.classList.add('active');
+      if (q.userAnswer !== '') pill.classList.add('has-answer');
+
+      pill.addEventListener('click', () => {
+        sound.playTap();
+        this.saveCurrentQuestionState();
+        this.loadQuestion(idx);
+      });
+      this.examPillStrip.appendChild(pill);
+    });
+  }
+
+  updateExamPillStrip() {
+    if (!this.examPillStrip) return;
+    const pills = this.examPillStrip.querySelectorAll('.exam-pill');
+    pills.forEach((pill, idx) => {
+      const q = this.questions[idx];
+      if (q) {
+        pill.classList.toggle('active', idx === this.currentIndex);
+        pill.classList.toggle('has-answer', q.userAnswer !== '');
+      }
+    });
+  }
+
+  saveCurrentQuestionState() {
+    if (this.questions.length === 0 || this.currentIndex < 0 || this.currentIndex >= this.questions.length) return;
+    const q = this.questions[this.currentIndex];
+    q.userAnswer = this.currentInput;
+    if (this.canvas) {
+      q.strokes = this.canvas.getStrokes();
+      q.snapshot = this.canvas.getSnapshot();
+    }
+    this.updateExamPillStrip();
+  }
+
+  prevQuestion() {
+    if (this.currentIndex > 0) {
+      this.saveCurrentQuestionState();
+      this.loadQuestion(this.currentIndex - 1);
+    }
+  }
+
+  nextQuestion() {
+    this.saveCurrentQuestionState();
+    if (this.currentIndex < this.questions.length - 1) {
+      this.loadQuestion(this.currentIndex + 1);
+    } else {
+      this.enterExamReview();
+    }
+  }
+
+  loadQuestion(index) {
+    if (index >= this.questions.length) {
+      if (this.config.mode === 'exam') {
+        this.enterExamReview();
+      } else {
+        this.finishQuiz();
+      }
+      return;
+    }
+
+    this.currentIndex = index;
+    const q = this.questions[index];
+    this.currentInput = (q.userAnswer !== undefined) ? String(q.userAnswer) : '';
+    this.isLocked = false;
+    this.updateAnswerDisplay();
+
+    this.problemFormula.textContent = `${q.num1} ${q.op} ${q.num2} = ?`;
+    this.progressText.textContent = `第 ${index + 1} / ${this.questions.length} 題`;
+    this.progressFill.style.width = `${((index + 1) / this.questions.length) * 100}%`;
+
+    // 載入該題手寫筆劃與題目蓋印
+    if (this.canvas) {
+      this.canvas.loadStrokes(q.strokes, q);
+    }
+
+    if (this.config.mode === 'exam') {
+      this.updateExamPillStrip();
+      if (this.btnQuizPrev) this.btnQuizPrev.disabled = (index === 0);
+      if (this.btnQuizNext) {
+        this.btnQuizNext.textContent = (index === this.questions.length - 1) ? '檢查交卷 📋' : '下一題 ▶';
+      }
+    } else {
+      // speed 模式：每題獨立計時
+      this.questionStartTime = Date.now();
+      this.timerBox.classList.remove('warning');
+
+      this.timer.start(
+        this.config.timerSeconds,
+        (state) => {
+          this.timerDisplay.textContent = state.isCountdown ? `${state.remaining}s` : state.formatted;
+        },
+        (rem) => {
+          this.timerBox.classList.add('warning');
+          sound.playTick();
+        },
+        () => {
+          this.handleTimeout();
+        }
+      );
+    }
   }
 
   handleKeyInput(key) {
@@ -1469,7 +1749,19 @@ class MathApp {
       this.currentInput = '';
       this.updateAnswerDisplay();
     } else if (key === 'enter') {
-      this.submitAnswer();
+      if (this.config.mode === 'exam') {
+        // 總時長測驗模式：輸入完按確定直接跳下一題，不評估對錯
+        sound.playTap();
+        this.saveCurrentQuestionState();
+        if (this.currentIndex < this.questions.length - 1) {
+          this.loadQuestion(this.currentIndex + 1);
+        } else {
+          this.enterExamReview();
+        }
+      } else {
+        // 單題速算模式：每題評估對錯
+        this.submitAnswer();
+      }
     }
   }
 
@@ -1478,6 +1770,82 @@ class MathApp {
     this.answerDisplay.classList.toggle('focused', !!this.currentInput);
   }
 
+  // === 總時長測驗模式：交卷前作答總覽核對 ===
+  enterExamReview() {
+    this.saveCurrentQuestionState();
+    this.showScreen('review');
+
+    const total = this.questions.length;
+    const answeredCount = this.questions.filter(q => q.userAnswer !== '').length;
+    const unansweredCount = total - answeredCount;
+
+    if (this.reviewAnsweredStat) {
+      this.reviewAnsweredStat.textContent = `${answeredCount} / ${total} 題`;
+    }
+
+    if (this.reviewUnansweredAlert) {
+      if (unansweredCount > 0) {
+        this.reviewUnansweredAlert.style.display = 'block';
+        if (this.reviewUnansweredCount) this.reviewUnansweredCount.textContent = unansweredCount;
+      } else {
+        this.reviewUnansweredAlert.style.display = 'none';
+      }
+    }
+
+    if (this.reviewItemsContainer) {
+      this.reviewItemsContainer.innerHTML = '';
+      this.questions.forEach((q, idx) => {
+        const card = document.createElement('div');
+        const isAnswered = q.userAnswer !== '';
+        card.className = `review-item-card ${isAnswered ? 'is-answered' : 'is-unanswered'}`;
+
+        card.innerHTML = `
+          <div class="review-card-top">
+            <span class="review-card-index">第 ${idx + 1} 題</span>
+            <span class="review-card-edit-btn">修改 ✏️</span>
+          </div>
+          <div class="review-card-formula">${q.num1} ${q.op} ${q.num2} =</div>
+          <div class="review-card-ans-val ${isAnswered ? 'filled' : 'empty'}">
+            ${isAnswered ? q.userAnswer : '未填寫 ⚠️'}
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          sound.playTap();
+          this.showScreen('quiz');
+          this.loadQuestion(idx);
+        });
+
+        this.reviewItemsContainer.appendChild(card);
+      });
+    }
+  }
+
+  // === 總時長測驗模式：確定交卷並一次批改全部 ===
+  confirmSubmitExam() {
+    this.timer.stop();
+
+    const totalTimeSec = Math.max(1, Math.round((Date.now() - this.quizStartTime) / 1000));
+    this.records = [];
+
+    this.questions.forEach((q) => {
+      const userAns = q.userAnswer !== '' ? parseInt(q.userAnswer, 10) : '未填';
+      const isCorrect = userAns !== '未填' && userAns === q.answer;
+
+      this.records.push({
+        question: q,
+        userAnswer: userAns,
+        isCorrect: isCorrect,
+        timeSpent: Math.round(totalTimeSec / this.questions.length),
+        isTimeout: false,
+        snapshot: q.snapshot || null
+      });
+    });
+
+    this.renderResultScreen(totalTimeSec);
+  }
+
+  // === 單題速算模式：每題作答後即刻批改 ===
   submitAnswer() {
     if (this.isLocked || !this.currentInput) return;
     this.isLocked = true;
@@ -1541,12 +1909,17 @@ class MathApp {
 
   finishQuiz() {
     this.timer.stop();
+    const totalTimeSec = this.records.reduce((acc, r) => acc + r.timeSpent, 0);
+    this.renderResultScreen(totalTimeSec);
+  }
+
+  // === 結算畫面渲染 (兩種模式通用) ===
+  renderResultScreen(totalTimeSec) {
     this.showScreen('result');
 
     const total = this.records.length;
     const correctCount = this.records.filter(r => r.isCorrect).length;
     const scorePct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-    const totalTimeSec = this.records.reduce((acc, r) => acc + r.timeSpent, 0);
     const avgTimeSec = total > 0 ? (totalTimeSec / total).toFixed(1) : 0;
 
     this.finalScore.textContent = `${scorePct} 分`;
@@ -1556,9 +1929,14 @@ class MathApp {
 
     if (scorePct === 100) {
       sound.playFanfare();
+    } else if (scorePct >= 80) {
+      sound.playCorrect();
     }
 
-    // 儲存至歷次作答歷史紀錄 (分數、平均答題秒數、模式設定)
+    const modeLabel = this.config.mode === 'exam'
+      ? `總時長(${this.config.totalTime > 0 ? Math.round(this.config.totalTime / 60) + '分' : '不限時'})`
+      : `速算(${this.config.timerSeconds > 0 ? this.config.timerSeconds + '秒' : '不限時'})`;
+
     const historyItem = {
       id: Date.now().toString(),
       timestamp: Date.now(),
@@ -1574,12 +1952,12 @@ class MathApp {
       operationLabel: this.getOperationLabel(this.config.operation),
       regroupMode: this.config.regroupMode,
       regroupModeLabel: this.getRegroupLabel(this.config.regroupMode),
-      modeSummary: `${this.getDigitModeLabel(this.config.digitMode)} · ${this.getOperationLabel(this.config.operation)} · ${this.getRegroupLabel(this.config.regroupMode)}`
+      modeSummary: `${modeLabel} · ${this.getDigitModeLabel(this.config.digitMode)} · ${this.getOperationLabel(this.config.operation)}`
     };
     this.addHistoryEntry(historyItem);
     this.renderHistoryPreview();
 
-    // 渲染作答明細與錯題筆跡回顧
+    // 渲染作答明細與手寫計算回顧
     this.reviewList.innerHTML = '';
     this.records.forEach((rec, idx) => {
       const q = rec.question;
@@ -1746,7 +2124,6 @@ class MathApp {
       return;
     }
 
-    // 顯示最新 3 筆預覽
     const previewItems = history.slice(0, 3);
     previewItems.forEach(item => {
       this.setupHistoryPreview.appendChild(this.renderHistoryItem(item));

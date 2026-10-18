@@ -488,6 +488,22 @@ export class ScratchpadCanvas {
   }
 
   /**
+   * 取得手寫筆劃資料副本 (用於題目切換保存)
+   */
+  getStrokes() {
+    return JSON.parse(JSON.stringify(this.strokes));
+  }
+
+  /**
+   * 載入指定筆劃資料與蓋印題目
+   */
+  loadStrokes(strokes = [], stampedProblem = null) {
+    this.strokes = strokes ? JSON.parse(JSON.stringify(strokes)) : [];
+    this.stampedProblem = stampedProblem || null;
+    this.render();
+  }
+
+  /**
    * 設定畫筆顏色
    */
   setPenColor(color) {
