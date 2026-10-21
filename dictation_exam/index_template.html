@@ -373,9 +373,9 @@
               <span class="setting-title">Apple Pencil 專用模式 (防手掌誤觸)</span>
               <span class="setting-desc">開啟後田字格僅接收 Apple Pencil 筆尖觸控，徹底防止手掌貼在螢幕時誤畫</span>
             </div>
-            <label style="position: relative; display: inline-block; width: 52px; height: 30px;">
-              <input type="checkbox" id="setting-pen-only" style="opacity: 0; width: 0; height: 0;">
-              <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; border-radius: 34px; transition: .3s;" onclick="this.previousElementSibling.click()"></span>
+            <label class="switch">
+              <input type="checkbox" id="setting-pen-only">
+              <span class="slider"></span>
             </label>
           </div>
 
@@ -384,19 +384,36 @@
               <span class="setting-title">互動提示音效</span>
               <span class="setting-desc">按鈕點擊、交卷、評分打勾打叉與完成慶祝音效</span>
             </div>
-            <label style="position: relative; display: inline-block; width: 52px; height: 30px;">
-              <input type="checkbox" id="setting-sound" checked style="opacity: 0; width: 0; height: 0;">
-              <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4f46e5; border-radius: 34px; transition: .3s;" onclick="this.previousElementSibling.click()"></span>
+            <label class="switch">
+              <input type="checkbox" id="setting-sound" checked>
+              <span class="slider"></span>
             </label>
           </div>
 
           <div class="setting-row">
             <div class="setting-info">
-              <span class="setting-title">國語發音人聲選擇</span>
+              <span class="setting-title">國語發音人聲與試聽</span>
               <span class="setting-desc">優先挑選 iPad 內建臺灣高品質自然語音（zh-TW）</span>
             </div>
-            <select id="setting-voice" class="form-select" style="width: 260px;">
-              <option value="">載入中...</option>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <select id="setting-voice" class="form-select" style="width: 240px;">
+                <option value="">載入中...</option>
+              </select>
+              <button id="btn-test-voice" class="tool-btn" style="white-space: nowrap;">
+                <span>🔊 試聽發音</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">朗讀音量大小</span>
+              <span class="setting-desc">解鎖 iPad 100% 最高音量，聽寫更清晰</span>
+            </div>
+            <select id="setting-speech-volume" class="form-select" style="width: 140px;">
+              <option value="1.0" selected>100% (最大推薦)</option>
+              <option value="0.9">90%</option>
+              <option value="0.8">80%</option>
             </select>
           </div>
 
@@ -410,6 +427,63 @@
               <option value="0.85" selected>標準適中 (0.85x)</option>
               <option value="1.0">一般自然 (1.0x)</option>
             </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">預設測驗題數</span>
+              <span class="setting-desc">每次開啟 App 時預設選擇的出題題數</span>
+            </div>
+            <select id="setting-default-count" class="form-select" style="width: 160px;">
+              <option value="5">5 題</option>
+              <option value="10">10 題</option>
+              <option value="20" selected>20 題 (標準)</option>
+              <option value="all">全部出題</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">預設出題順序</span>
+              <span class="setting-desc">每次開啟 App 時預設選擇的出題順序</span>
+            </div>
+            <select id="setting-default-order" class="form-select" style="width: 160px;">
+              <option value="random" selected>隨機抽題</option>
+              <option value="order">依題庫順序</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">預設計時模式</span>
+              <span class="setting-desc">每次開啟 App 時預設選擇的計時方式</span>
+            </div>
+            <select id="setting-default-timer" class="form-select" style="width: 200px;">
+              <option value="none" selected>不限時 (正向記錄作答)</option>
+              <option value="total">全卷總時長 10 分鐘</option>
+              <option value="per_question">單題倒數 30 秒</option>
+            </select>
+          </div>
+
+          <!-- iPad 聲音與發音優化小提示卡 -->
+          <div style="margin-top: 24px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 16px; color: #166534; font-size: 0.92rem; line-height: 1.6;">
+            <div style="font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 1rem;">
+              <span>💡 iPad 語音音量與標準臺灣發音設定技巧：</span>
+            </div>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li><strong>聲音太小？</strong>除了上方設定為 100% 外，請按 iPad 側邊的<strong>實體音量加鍵</strong>，將媒體音量調至最大。</li>
+              <li><strong>想要像老師一樣標準自然發音？</strong>請前往 iPad 的<strong>「設定」➔「輔助使用」➔「語音內容」➔「聲音」➔「中文 (臺灣)」</strong>，下載<strong>「Siri」</strong>或<strong>「美佳 (增強版)」</strong>高品質人聲，本系統將自動優先採用！</li>
+            </ul>
+          </div>
+
+          <!-- 儲存設定按鈕 -->
+          <div style="margin-top: 28px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+            <button id="btn-save-settings" class="btn-save-settings">
+              <span>💾 儲存設定</span>
+            </button>
+            <div id="save-settings-msg" class="save-settings-msg">
+              <span>✅ 設定已成功儲存！下次開啟將自動保持此設定。</span>
+            </div>
           </div>
         </div>
       </section>

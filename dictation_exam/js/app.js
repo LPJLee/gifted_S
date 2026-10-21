@@ -151,8 +151,75 @@ class ExamAppController {
   saveSettings() {
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(this.settings));
+      // 同步共用設定至 gifted_s_settings，確保跨 App 切換時偏好一致
+      const common = {
+        countdownSeconds: this.settings.countdownSeconds,
+        gridType: this.settings.gridType,
+        gridSize: this.settings.gridSize,
+        speechRate: this.settings.speechRate,
+        speechVolume: this.settings.speechVolume,
+        voiceURI: this.settings.voiceURI,
+        penOnly: this.settings.penOnly,
+        soundEffects: this.settings.soundEffects
+      };
+      localStorage.setItem('gifted_s_settings', JSON.stringify(common));
     } catch (e) {}
     this.applySettingsToUI();
+  }
+
+  saveSettingsFromForm() {
+    const inputTimer = document.getElementById('setting-timer');
+    const selectGridSize = document.getElementById('setting-grid-size');
+    const selectGridType = document.getElementById('setting-grid-type');
+    const checkPenOnly = document.getElementById('setting-pen-only');
+    const checkSound = document.getElementById('setting-sound');
+    const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const selectVoice = document.getElementById('setting-voice');
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
+
+    if (inputTimer) {
+      let sec = parseInt(inputTimer.value, 10);
+      if (isNaN(sec) || sec < 5) sec = 5;
+      if (sec > 300) sec = 300;
+      inputTimer.value = sec;
+      this.settings.countdownSeconds = sec;
+    }
+
+    if (selectGridSize) this.settings.gridSize = selectGridSize.value;
+    if (selectGridType) this.settings.gridType = selectGridType.value;
+    if (checkPenOnly) this.settings.penOnly = checkPenOnly.checked;
+    if (checkSound) this.settings.soundEffects = checkSound.checked;
+    if (selectRate) this.settings.speechRate = parseFloat(selectRate.value) || 0.85;
+    if (selectVolume) this.settings.speechVolume = parseFloat(selectVolume.value) || 1.0;
+    if (selectVoice) this.settings.voiceURI = selectVoice.value;
+    if (selectDefaultCount) this.settings.defaultQuestionCount = selectDefaultCount.value;
+    if (selectDefaultOrder) this.settings.randomOrder = (selectDefaultOrder.value === 'random');
+    if (selectDefaultTimer) this.settings.timerMode = selectDefaultTimer.value;
+
+    this.saveSettings();
+
+    // 即刻更新當前所有田字格畫布
+    this.currentCanvases.forEach(c => {
+      c.options.gridType = this.settings.gridType;
+      c.options.penOnly = !!this.settings.penOnly;
+      c.initCanvasSize();
+      c.render();
+    });
+
+    sound.playSuccess();
+
+    // 顯示成功提示訊息
+    const saveMsg = document.getElementById('save-settings-msg');
+    if (saveMsg) {
+      saveMsg.style.display = 'inline-flex';
+      clearTimeout(this.saveMsgTimeout);
+      this.saveMsgTimeout = setTimeout(() => {
+        saveMsg.style.display = 'none';
+      }, 3500);
+    }
   }
 
   applySettingsToUI() {
@@ -175,6 +242,10 @@ class ExamAppController {
     const checkPenOnly = document.getElementById('setting-pen-only');
     const checkSound = document.getElementById('setting-sound');
     const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
 
     if (inputTimer && document.activeElement !== inputTimer) inputTimer.value = this.settings.countdownSeconds;
     if (selectGridSize) selectGridSize.value = this.settings.gridSize;
@@ -182,6 +253,15 @@ class ExamAppController {
     if (checkPenOnly) checkPenOnly.checked = !!this.settings.penOnly;
     if (checkSound) checkSound.checked = !!this.settings.soundEffects;
     if (selectRate) selectRate.value = this.settings.speechRate;
+    if (selectVolume) selectVolume.value = String(this.settings.speechVolume || 1.0);
+    if (selectDefaultCount) selectDefaultCount.value = this.settings.defaultQuestionCount || '20';
+    if (selectDefaultOrder) selectDefaultOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    if (selectDefaultTimer) selectDefaultTimer.value = this.settings.timerMode || 'none';
+
+    // 同步測驗首頁 (view-start) 下拉選單為上一次/預設設定
+    if (this.selectStartCount) this.selectStartCount.value = this.settings.defaultQuestionCount || '20';
+    if (this.selectStartOrder) this.selectStartOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    if (this.selectStartTimer) this.selectStartTimer.value = this.settings.timerMode || 'none';
 
     this.populateVoiceList();
   }
@@ -382,7 +462,36 @@ class ExamAppController {
       this.fileImportInput.addEventListener('change', (e) => this.handleImportBanks(e));
     }
 
-    // 設定表單事件
+    // 儲存設定按鈕 (使用者建議 1：設定好之後，要有儲存按鈕)
+    const btnSaveSettings = document.getElementById('btn-save-settings');
+    if (btnSaveSettings) {
+      btnSaveSettings.addEventListener('click', () => {
+        this.saveSettingsFromForm();
+      });
+    }
+
+    // 試聽發音按鈕
+    const btnTestVoice = document.getElementById('btn-test-voice');
+    if (btnTestVoice) {
+      btnTestVoice.addEventListener('click', () => {
+        sound.playTap();
+        const selectVoice = document.getElementById('setting-voice');
+        if (selectVoice && selectVoice.value) {
+          speech.setVoice(selectVoice.value);
+        }
+        const selectRate = document.getElementById('setting-speech-rate');
+        if (selectRate) {
+          speech.setRate(parseFloat(selectRate.value) || 0.85);
+        }
+        const selectVolume = document.getElementById('setting-speech-volume');
+        if (selectVolume) {
+          speech.setVolume(parseFloat(selectVolume.value) || 1.0);
+        }
+        speech.speak('這是國語生字聽寫測驗的標準發音測試。');
+      });
+    }
+
+    // 設定表單各控制項變更時自動同步
     const inputTimer = document.getElementById('setting-timer');
     if (inputTimer) {
       inputTimer.addEventListener('change', (e) => {
@@ -434,10 +543,42 @@ class ExamAppController {
       });
     }
 
+    const selectVolume = document.getElementById('setting-speech-volume');
+    if (selectVolume) {
+      selectVolume.addEventListener('change', (e) => {
+        this.settings.speechVolume = parseFloat(e.target.value) || 1.0;
+        this.saveSettings();
+      });
+    }
+
     const selectVoice = document.getElementById('setting-voice');
     if (selectVoice) {
       selectVoice.addEventListener('change', (e) => {
         this.settings.voiceURI = e.target.value;
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    if (selectDefaultCount) {
+      selectDefaultCount.addEventListener('change', (e) => {
+        this.settings.defaultQuestionCount = e.target.value;
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    if (selectDefaultOrder) {
+      selectDefaultOrder.addEventListener('change', (e) => {
+        this.settings.randomOrder = (e.target.value === 'random');
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
+    if (selectDefaultTimer) {
+      selectDefaultTimer.addEventListener('change', (e) => {
+        this.settings.timerMode = e.target.value;
         this.saveSettings();
       });
     }
@@ -473,6 +614,17 @@ class ExamAppController {
         this.selectStartBank.appendChild(opt);
       });
     }
+
+    // 每次開啟時，精確還原上一次的設定 (使用者建議 2)
+    if (this.selectStartCount) {
+      this.selectStartCount.value = this.settings.defaultQuestionCount || '20';
+    }
+    if (this.selectStartOrder) {
+      this.selectStartOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    }
+    if (this.selectStartTimer) {
+      this.selectStartTimer.value = this.settings.timerMode || 'none';
+    }
   }
 
   startNewExam(customWords = null, customBankName = null) {
@@ -496,8 +648,10 @@ class ExamAppController {
       bankName = bank.name;
       words = [...bank.words];
 
-      // 順序或隨機
+      // 順序或隨機 (自動儲存當前設定，下次開啟保持)
       const isRandom = this.selectStartOrder ? (this.selectStartOrder.value === 'random') : this.settings.randomOrder;
+      this.settings.randomOrder = isRandom;
+
       if (isRandom) {
         for (let i = words.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -505,14 +659,23 @@ class ExamAppController {
         }
       }
 
-      // 題數截取
+      // 題數截取 (自動儲存當前設定，下次開啟保持)
       const countVal = this.selectStartCount ? this.selectStartCount.value : '20';
+      this.settings.defaultQuestionCount = countVal;
+
       if (countVal !== 'all') {
         const limit = parseInt(countVal, 10) || 20;
         if (words.length > limit) {
           words = words.slice(0, limit);
         }
       }
+
+      // 計時模式選擇 (自動儲存當前設定，下次開啟保持)
+      const timerMode = this.selectStartTimer ? this.selectStartTimer.value : this.settings.timerMode;
+      this.settings.timerMode = timerMode;
+
+      // 自動持久化儲存偏好
+      this.saveSettings();
     }
 
     // 初始化測驗題目結構

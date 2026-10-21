@@ -391,7 +391,7 @@ class QuizTimer {
 // === 田字格畫布核心 ===
 /**
  * 田字格 / 米字格 Canvas 手寫核心模組
- * 深度支援 iPad + Apple Pencil 壓感、Retina 像素對齊、筆劃保存與復原
+ * 深度支援 iPad + Apple Pencil 240Hz 高頻採樣、Retina 像素對齊、微位移極速連筆與防手掌誤觸
  */
 class TianZiGeCanvas {
   /**
@@ -400,14 +400,14 @@ class TianZiGeCanvas {
    */
   constructor(canvasElement, options = {}) {
     this.canvas = canvasElement;
-    this.ctx = canvasElement.getContext('2d');
+    this.ctx = canvasElement.getContext('2d', { willReadFrequently: true });
     
     this.options = Object.assign({
       gridType: 'tian', // 'tian' (田字格) 或 'mi' (米字格)
       gridColor: '#f43f5e',
       lineColor: '#fca5a5',
       inkColor: '#1e293b',
-      baseStrokeWidth: 4.5,
+      baseStrokeWidth: 4.8,
       pressureSensitive: true,
       penOnly: false, // 是否僅允許 Apple Pencil (防止手掌誤觸)
       onStrokeEnd: null
@@ -437,6 +437,7 @@ class TianZiGeCanvas {
 
     this.canvas.style.width = width + 'px';
     this.canvas.style.height = height + 'px';
+    this.canvas.style.touchAction = 'none'; // 強制禁止瀏覽器手勢延遲
 
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.cssWidth = width;
@@ -445,6 +446,7 @@ class TianZiGeCanvas {
 
   bindEvents() {
     const el = this.canvas;
+    // 使用 { passive: false } 確保 e.preventDefault() 100% 生效，防止 iOS 瀏覽器手勢攔截與中斷筆劃
     el.addEventListener('pointerdown', (e) => this.onPointerDown(e), { passive: false });
     el.addEventListener('pointermove', (e) => this.onPointerMove(e), { passive: false });
     el.addEventListener('pointerup', (e) => this.onPointerUp(e), { passive: false });
@@ -466,6 +468,7 @@ class TianZiGeCanvas {
 
   onPointerDown(e) {
     if (this.isLocked) return;
+    // 若開啟「Apple Pencil 專用模式」，忽略所有手指或手掌誤觸 (touch)
     if (this.options.penOnly && e.pointerType === 'touch') return;
 
     e.preventDefault();
@@ -479,32 +482,51 @@ class TianZiGeCanvas {
 
     const pt = this.getPointerPos(e);
     this.currentStroke = [pt];
-    this.drawDot(pt);
+    this.drawDot(pt); // 落筆瞬間立即畫點，0 延遲即時反饋
   }
 
   onPointerMove(e) {
-    if (!this.isDrawing || e.pointerId !== this.currentPointerId) return;
+    if (!this.isDrawing || this.isLocked) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
+
     e.preventDefault();
 
-    const pt = this.getPointerPos(e);
-    const len = this.currentStroke.length;
-    if (len > 0) {
-      const prev = this.currentStroke[len - 1];
-      this.drawSegment(prev, pt);
+    // 關鍵升級：支援 iPad Pro/Air 240Hz 高頻採樣 (getCoalescedEvents)
+    // 快速運筆、連筆、撇捺時，完整捕獲所有中間微小座標點，絕不掉筆劃！
+    const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
+      ? e.getCoalescedEvents()
+      : [e];
+
+    for (const ev of events) {
+      const pt = this.getPointerPos(ev);
+      const len = this.currentStroke.length;
+      if (len > 0) {
+        const lastPt = this.currentStroke[len - 1];
+        const dx = pt.x - lastPt.x;
+        const dy = pt.y - lastPt.y;
+        // 靈敏度門檻：位移 >= 0.5 像素 (平方 >= 0.25) 即時連線繪製，極度靈敏跟筆
+        if (dx * dx + dy * dy >= 0.25) {
+          this.currentStroke.push(pt);
+          this.drawSegment(lastPt, pt);
+        }
+      } else {
+        this.currentStroke.push(pt);
+        this.drawDot(pt);
+      }
     }
-    this.currentStroke.push(pt);
   }
 
   onPointerUp(e) {
-    if (!this.isDrawing || e.pointerId !== this.currentPointerId) return;
+    if (!this.isDrawing) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
     e.preventDefault();
+
+    this.isDrawing = false;
+    this.currentPointerId = null;
 
     try {
       this.canvas.releasePointerCapture(e.pointerId);
     } catch (err) {}
-
-    this.isDrawing = false;
-    this.currentPointerId = null;
 
     if (this.currentStroke.length > 0) {
       this.strokes.push([...this.currentStroke]);
@@ -522,33 +544,33 @@ class TianZiGeCanvas {
 
   drawDot(pt) {
     const ctx = this.ctx;
-    ctx.save();
+    const p = (pt.pressure !== undefined && pt.pressure > 0) ? pt.pressure : 0.5;
+    // 提升最低筆寬，保證輕觸落筆依然清晰有感
+    const radius = Math.max(1.8, (this.options.baseStrokeWidth * (this.options.pressureSensitive ? (0.65 + p * 0.8) : 1.0)) / 2);
+
     ctx.fillStyle = this.options.inkColor;
-    const radius = (this.options.baseStrokeWidth * (this.options.pressureSensitive ? (pt.pressure || 0.5) : 0.5)) + 1;
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
 
   drawSegment(p1, p2) {
     const ctx = this.ctx;
-    ctx.save();
+    const p = (p1.pressure + p2.pressure) / 2;
+    // 動態筆寬公式：保證輕手快速寫字時筆觸飽滿靈敏，重壓時自然加粗
+    const width = this.options.pressureSensitive
+      ? Math.max(2.8, this.options.baseStrokeWidth * (0.65 + p * 0.8))
+      : this.options.baseStrokeWidth;
+
     ctx.strokeStyle = this.options.inkColor;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-
-    const p = (p1.pressure + p2.pressure) / 2;
-    const width = this.options.pressureSensitive
-      ? this.options.baseStrokeWidth * (0.4 + p * 1.2)
-      : this.options.baseStrokeWidth;
-
     ctx.lineWidth = width;
+
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
-    ctx.restore();
   }
 
   render() {
@@ -662,6 +684,7 @@ class TianZiGeCanvas {
     return this.strokes.length > 0;
   }
 }
+
 
 // === 題庫管理模組 ===
 /**
@@ -1104,8 +1127,75 @@ class ExamAppController {
   saveSettings() {
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(this.settings));
+      // 同步共用設定至 gifted_s_settings，確保跨 App 切換時偏好一致
+      const common = {
+        countdownSeconds: this.settings.countdownSeconds,
+        gridType: this.settings.gridType,
+        gridSize: this.settings.gridSize,
+        speechRate: this.settings.speechRate,
+        speechVolume: this.settings.speechVolume,
+        voiceURI: this.settings.voiceURI,
+        penOnly: this.settings.penOnly,
+        soundEffects: this.settings.soundEffects
+      };
+      localStorage.setItem('gifted_s_settings', JSON.stringify(common));
     } catch (e) {}
     this.applySettingsToUI();
+  }
+
+  saveSettingsFromForm() {
+    const inputTimer = document.getElementById('setting-timer');
+    const selectGridSize = document.getElementById('setting-grid-size');
+    const selectGridType = document.getElementById('setting-grid-type');
+    const checkPenOnly = document.getElementById('setting-pen-only');
+    const checkSound = document.getElementById('setting-sound');
+    const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const selectVoice = document.getElementById('setting-voice');
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
+
+    if (inputTimer) {
+      let sec = parseInt(inputTimer.value, 10);
+      if (isNaN(sec) || sec < 5) sec = 5;
+      if (sec > 300) sec = 300;
+      inputTimer.value = sec;
+      this.settings.countdownSeconds = sec;
+    }
+
+    if (selectGridSize) this.settings.gridSize = selectGridSize.value;
+    if (selectGridType) this.settings.gridType = selectGridType.value;
+    if (checkPenOnly) this.settings.penOnly = checkPenOnly.checked;
+    if (checkSound) this.settings.soundEffects = checkSound.checked;
+    if (selectRate) this.settings.speechRate = parseFloat(selectRate.value) || 0.85;
+    if (selectVolume) this.settings.speechVolume = parseFloat(selectVolume.value) || 1.0;
+    if (selectVoice) this.settings.voiceURI = selectVoice.value;
+    if (selectDefaultCount) this.settings.defaultQuestionCount = selectDefaultCount.value;
+    if (selectDefaultOrder) this.settings.randomOrder = (selectDefaultOrder.value === 'random');
+    if (selectDefaultTimer) this.settings.timerMode = selectDefaultTimer.value;
+
+    this.saveSettings();
+
+    // 即刻更新當前所有田字格畫布
+    this.currentCanvases.forEach(c => {
+      c.options.gridType = this.settings.gridType;
+      c.options.penOnly = !!this.settings.penOnly;
+      c.initCanvasSize();
+      c.render();
+    });
+
+    sound.playSuccess();
+
+    // 顯示成功提示訊息
+    const saveMsg = document.getElementById('save-settings-msg');
+    if (saveMsg) {
+      saveMsg.style.display = 'inline-flex';
+      clearTimeout(this.saveMsgTimeout);
+      this.saveMsgTimeout = setTimeout(() => {
+        saveMsg.style.display = 'none';
+      }, 3500);
+    }
   }
 
   applySettingsToUI() {
@@ -1128,6 +1218,10 @@ class ExamAppController {
     const checkPenOnly = document.getElementById('setting-pen-only');
     const checkSound = document.getElementById('setting-sound');
     const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
 
     if (inputTimer && document.activeElement !== inputTimer) inputTimer.value = this.settings.countdownSeconds;
     if (selectGridSize) selectGridSize.value = this.settings.gridSize;
@@ -1135,6 +1229,15 @@ class ExamAppController {
     if (checkPenOnly) checkPenOnly.checked = !!this.settings.penOnly;
     if (checkSound) checkSound.checked = !!this.settings.soundEffects;
     if (selectRate) selectRate.value = this.settings.speechRate;
+    if (selectVolume) selectVolume.value = String(this.settings.speechVolume || 1.0);
+    if (selectDefaultCount) selectDefaultCount.value = this.settings.defaultQuestionCount || '20';
+    if (selectDefaultOrder) selectDefaultOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    if (selectDefaultTimer) selectDefaultTimer.value = this.settings.timerMode || 'none';
+
+    // 同步測驗首頁 (view-start) 下拉選單為上一次/預設設定
+    if (this.selectStartCount) this.selectStartCount.value = this.settings.defaultQuestionCount || '20';
+    if (this.selectStartOrder) this.selectStartOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    if (this.selectStartTimer) this.selectStartTimer.value = this.settings.timerMode || 'none';
 
     this.populateVoiceList();
   }
@@ -1335,7 +1438,36 @@ class ExamAppController {
       this.fileImportInput.addEventListener('change', (e) => this.handleImportBanks(e));
     }
 
-    // 設定表單事件
+    // 儲存設定按鈕 (使用者建議 1：設定好之後，要有儲存按鈕)
+    const btnSaveSettings = document.getElementById('btn-save-settings');
+    if (btnSaveSettings) {
+      btnSaveSettings.addEventListener('click', () => {
+        this.saveSettingsFromForm();
+      });
+    }
+
+    // 試聽發音按鈕
+    const btnTestVoice = document.getElementById('btn-test-voice');
+    if (btnTestVoice) {
+      btnTestVoice.addEventListener('click', () => {
+        sound.playTap();
+        const selectVoice = document.getElementById('setting-voice');
+        if (selectVoice && selectVoice.value) {
+          speech.setVoice(selectVoice.value);
+        }
+        const selectRate = document.getElementById('setting-speech-rate');
+        if (selectRate) {
+          speech.setRate(parseFloat(selectRate.value) || 0.85);
+        }
+        const selectVolume = document.getElementById('setting-speech-volume');
+        if (selectVolume) {
+          speech.setVolume(parseFloat(selectVolume.value) || 1.0);
+        }
+        speech.speak('這是國語生字聽寫測驗的標準發音測試。');
+      });
+    }
+
+    // 設定表單各控制項變更時自動同步
     const inputTimer = document.getElementById('setting-timer');
     if (inputTimer) {
       inputTimer.addEventListener('change', (e) => {
@@ -1387,10 +1519,42 @@ class ExamAppController {
       });
     }
 
+    const selectVolume = document.getElementById('setting-speech-volume');
+    if (selectVolume) {
+      selectVolume.addEventListener('change', (e) => {
+        this.settings.speechVolume = parseFloat(e.target.value) || 1.0;
+        this.saveSettings();
+      });
+    }
+
     const selectVoice = document.getElementById('setting-voice');
     if (selectVoice) {
       selectVoice.addEventListener('change', (e) => {
         this.settings.voiceURI = e.target.value;
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    if (selectDefaultCount) {
+      selectDefaultCount.addEventListener('change', (e) => {
+        this.settings.defaultQuestionCount = e.target.value;
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    if (selectDefaultOrder) {
+      selectDefaultOrder.addEventListener('change', (e) => {
+        this.settings.randomOrder = (e.target.value === 'random');
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
+    if (selectDefaultTimer) {
+      selectDefaultTimer.addEventListener('change', (e) => {
+        this.settings.timerMode = e.target.value;
         this.saveSettings();
       });
     }
@@ -1426,6 +1590,17 @@ class ExamAppController {
         this.selectStartBank.appendChild(opt);
       });
     }
+
+    // 每次開啟時，精確還原上一次的設定 (使用者建議 2)
+    if (this.selectStartCount) {
+      this.selectStartCount.value = this.settings.defaultQuestionCount || '20';
+    }
+    if (this.selectStartOrder) {
+      this.selectStartOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    }
+    if (this.selectStartTimer) {
+      this.selectStartTimer.value = this.settings.timerMode || 'none';
+    }
   }
 
   startNewExam(customWords = null, customBankName = null) {
@@ -1449,8 +1624,10 @@ class ExamAppController {
       bankName = bank.name;
       words = [...bank.words];
 
-      // 順序或隨機
+      // 順序或隨機 (自動儲存當前設定，下次開啟保持)
       const isRandom = this.selectStartOrder ? (this.selectStartOrder.value === 'random') : this.settings.randomOrder;
+      this.settings.randomOrder = isRandom;
+
       if (isRandom) {
         for (let i = words.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -1458,14 +1635,23 @@ class ExamAppController {
         }
       }
 
-      // 題數截取
+      // 題數截取 (自動儲存當前設定，下次開啟保持)
       const countVal = this.selectStartCount ? this.selectStartCount.value : '20';
+      this.settings.defaultQuestionCount = countVal;
+
       if (countVal !== 'all') {
         const limit = parseInt(countVal, 10) || 20;
         if (words.length > limit) {
           words = words.slice(0, limit);
         }
       }
+
+      // 計時模式選擇 (自動儲存當前設定，下次開啟保持)
+      const timerMode = this.selectStartTimer ? this.selectStartTimer.value : this.settings.timerMode;
+      this.settings.timerMode = timerMode;
+
+      // 自動持久化儲存偏好
+      this.saveSettings();
     }
 
     // 初始化測驗題目結構

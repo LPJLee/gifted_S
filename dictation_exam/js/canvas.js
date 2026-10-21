@@ -1,6 +1,6 @@
 /**
  * 田字格 / 米字格 Canvas 手寫核心模組
- * 深度支援 iPad + Apple Pencil 壓感、Retina 像素對齊、筆劃保存與復原
+ * 深度支援 iPad + Apple Pencil 240Hz 高頻採樣、Retina 像素對齊、微位移極速連筆與防手掌誤觸
  */
 export class TianZiGeCanvas {
   /**
@@ -9,14 +9,14 @@ export class TianZiGeCanvas {
    */
   constructor(canvasElement, options = {}) {
     this.canvas = canvasElement;
-    this.ctx = canvasElement.getContext('2d');
+    this.ctx = canvasElement.getContext('2d', { willReadFrequently: true });
     
     this.options = Object.assign({
       gridType: 'tian', // 'tian' (田字格) 或 'mi' (米字格)
       gridColor: '#f43f5e',
       lineColor: '#fca5a5',
       inkColor: '#1e293b',
-      baseStrokeWidth: 4.5,
+      baseStrokeWidth: 4.8,
       pressureSensitive: true,
       penOnly: false, // 是否僅允許 Apple Pencil (防止手掌誤觸)
       onStrokeEnd: null
@@ -46,6 +46,7 @@ export class TianZiGeCanvas {
 
     this.canvas.style.width = width + 'px';
     this.canvas.style.height = height + 'px';
+    this.canvas.style.touchAction = 'none'; // 強制禁止瀏覽器手勢延遲
 
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.cssWidth = width;
@@ -54,6 +55,7 @@ export class TianZiGeCanvas {
 
   bindEvents() {
     const el = this.canvas;
+    // 使用 { passive: false } 確保 e.preventDefault() 100% 生效，防止 iOS 瀏覽器手勢攔截與中斷筆劃
     el.addEventListener('pointerdown', (e) => this.onPointerDown(e), { passive: false });
     el.addEventListener('pointermove', (e) => this.onPointerMove(e), { passive: false });
     el.addEventListener('pointerup', (e) => this.onPointerUp(e), { passive: false });
@@ -75,6 +77,7 @@ export class TianZiGeCanvas {
 
   onPointerDown(e) {
     if (this.isLocked) return;
+    // 若開啟「Apple Pencil 專用模式」，忽略所有手指或手掌誤觸 (touch)
     if (this.options.penOnly && e.pointerType === 'touch') return;
 
     e.preventDefault();
@@ -88,32 +91,51 @@ export class TianZiGeCanvas {
 
     const pt = this.getPointerPos(e);
     this.currentStroke = [pt];
-    this.drawDot(pt);
+    this.drawDot(pt); // 落筆瞬間立即畫點，0 延遲即時反饋
   }
 
   onPointerMove(e) {
-    if (!this.isDrawing || e.pointerId !== this.currentPointerId) return;
+    if (!this.isDrawing || this.isLocked) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
+
     e.preventDefault();
 
-    const pt = this.getPointerPos(e);
-    const len = this.currentStroke.length;
-    if (len > 0) {
-      const prev = this.currentStroke[len - 1];
-      this.drawSegment(prev, pt);
+    // 關鍵升級：支援 iPad Pro/Air 240Hz 高頻採樣 (getCoalescedEvents)
+    // 快速運筆、連筆、撇捺時，完整捕獲所有中間微小座標點，絕不掉筆劃！
+    const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
+      ? e.getCoalescedEvents()
+      : [e];
+
+    for (const ev of events) {
+      const pt = this.getPointerPos(ev);
+      const len = this.currentStroke.length;
+      if (len > 0) {
+        const lastPt = this.currentStroke[len - 1];
+        const dx = pt.x - lastPt.x;
+        const dy = pt.y - lastPt.y;
+        // 靈敏度門檻：位移 >= 0.5 像素 (平方 >= 0.25) 即時連線繪製，極度靈敏跟筆
+        if (dx * dx + dy * dy >= 0.25) {
+          this.currentStroke.push(pt);
+          this.drawSegment(lastPt, pt);
+        }
+      } else {
+        this.currentStroke.push(pt);
+        this.drawDot(pt);
+      }
     }
-    this.currentStroke.push(pt);
   }
 
   onPointerUp(e) {
-    if (!this.isDrawing || e.pointerId !== this.currentPointerId) return;
+    if (!this.isDrawing) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
     e.preventDefault();
+
+    this.isDrawing = false;
+    this.currentPointerId = null;
 
     try {
       this.canvas.releasePointerCapture(e.pointerId);
     } catch (err) {}
-
-    this.isDrawing = false;
-    this.currentPointerId = null;
 
     if (this.currentStroke.length > 0) {
       this.strokes.push([...this.currentStroke]);
@@ -131,33 +153,33 @@ export class TianZiGeCanvas {
 
   drawDot(pt) {
     const ctx = this.ctx;
-    ctx.save();
+    const p = (pt.pressure !== undefined && pt.pressure > 0) ? pt.pressure : 0.5;
+    // 提升最低筆寬，保證輕觸落筆依然清晰有感
+    const radius = Math.max(1.8, (this.options.baseStrokeWidth * (this.options.pressureSensitive ? (0.65 + p * 0.8) : 1.0)) / 2);
+
     ctx.fillStyle = this.options.inkColor;
-    const radius = (this.options.baseStrokeWidth * (this.options.pressureSensitive ? (pt.pressure || 0.5) : 0.5)) + 1;
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
 
   drawSegment(p1, p2) {
     const ctx = this.ctx;
-    ctx.save();
+    const p = (p1.pressure + p2.pressure) / 2;
+    // 動態筆寬公式：保證輕手快速寫字時筆觸飽滿靈敏，重壓時自然加粗
+    const width = this.options.pressureSensitive
+      ? Math.max(2.8, this.options.baseStrokeWidth * (0.65 + p * 0.8))
+      : this.options.baseStrokeWidth;
+
     ctx.strokeStyle = this.options.inkColor;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-
-    const p = (p1.pressure + p2.pressure) / 2;
-    const width = this.options.pressureSensitive
-      ? this.options.baseStrokeWidth * (0.4 + p * 1.2)
-      : this.options.baseStrokeWidth;
-
     ctx.lineWidth = width;
+
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
-    ctx.restore();
   }
 
   render() {

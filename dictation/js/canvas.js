@@ -161,28 +161,27 @@ export class TianZiGeCanvas {
   /** 繪製落筆起始圓點 */
   drawDot(pt) {
     const ctx = this.ctx;
-    ctx.save();
     ctx.fillStyle = this.options.inkColor;
+    const p = (pt.pressure !== undefined && pt.pressure > 0) ? pt.pressure : 0.5;
+    const radius = Math.max(1.8, (this.options.baseStrokeWidth * (this.options.pressureSensitive ? (0.65 + p * 0.8) : 1.0)) / 2);
     ctx.beginPath();
-    const radius = (this.options.baseStrokeWidth * (0.6 + pt.pressure * 0.8)) / 2;
     ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
 
   /** 即時連接相鄰兩點，支援 Apple Pencil 壓感線條寬度 */
   drawSegment(p1, p2) {
     const ctx = this.ctx;
-    ctx.save();
     ctx.strokeStyle = this.options.inkColor;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     let lineWidth = this.options.baseStrokeWidth;
-    if (this.options.pressureSensitive && p2.pointerType === 'pen') {
-      lineWidth = this.options.baseStrokeWidth * (0.5 + p2.pressure * 1.0);
+    if (this.options.pressureSensitive && (p2.pointerType === 'pen' || p1.pointerType === 'pen')) {
+      const p = (p1.pressure + p2.pressure) / 2;
+      lineWidth = Math.max(2.8, this.options.baseStrokeWidth * (0.65 + p * 0.8));
     } else {
-      lineWidth = this.options.baseStrokeWidth * 0.9;
+      lineWidth = Math.max(2.8, this.options.baseStrokeWidth * 0.9);
     }
     ctx.lineWidth = lineWidth;
 
@@ -190,8 +189,6 @@ export class TianZiGeCanvas {
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
-
-    ctx.restore();
   }
 
   /** 重繪整個畫布 (包含背景田字格與所有歷史筆劃) */

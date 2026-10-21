@@ -575,6 +575,10 @@ header.app-header {
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .cell-index-badge {
@@ -1349,6 +1353,96 @@ header.app-header {
   color: #64748b;
 }
 
+/* 開關切換按鈕 (iOS Switch Toggle) */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: 0.25s ease;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+  background-color: #ffffff;
+  transition: 0.25s ease;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+/* 儲存設定按鈕 */
+.btn-save-settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 240px;
+  padding: 16px 36px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-save-settings:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.45);
+}
+
+.btn-save-settings:active {
+  transform: translateY(1px);
+}
+
+.save-settings-msg {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  background-color: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  color: #065f46;
+  font-size: 1rem;
+  font-weight: 700;
+  animation: fadeIn 0.25s ease-out;
+}
+
 @media (max-width: 640px) {
   header.app-header {
     padding: 10px 12px;
@@ -1723,9 +1817,9 @@ header.app-header {
               <span class="setting-title">Apple Pencil 專用模式 (防手掌誤觸)</span>
               <span class="setting-desc">開啟後田字格僅接收 Apple Pencil 筆尖觸控，徹底防止手掌貼在螢幕時誤畫</span>
             </div>
-            <label style="position: relative; display: inline-block; width: 52px; height: 30px;">
-              <input type="checkbox" id="setting-pen-only" style="opacity: 0; width: 0; height: 0;">
-              <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; border-radius: 34px; transition: .3s;" onclick="this.previousElementSibling.click()"></span>
+            <label class="switch">
+              <input type="checkbox" id="setting-pen-only">
+              <span class="slider"></span>
             </label>
           </div>
 
@@ -1734,19 +1828,36 @@ header.app-header {
               <span class="setting-title">互動提示音效</span>
               <span class="setting-desc">按鈕點擊、交卷、評分打勾打叉與完成慶祝音效</span>
             </div>
-            <label style="position: relative; display: inline-block; width: 52px; height: 30px;">
-              <input type="checkbox" id="setting-sound" checked style="opacity: 0; width: 0; height: 0;">
-              <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4f46e5; border-radius: 34px; transition: .3s;" onclick="this.previousElementSibling.click()"></span>
+            <label class="switch">
+              <input type="checkbox" id="setting-sound" checked>
+              <span class="slider"></span>
             </label>
           </div>
 
           <div class="setting-row">
             <div class="setting-info">
-              <span class="setting-title">國語發音人聲選擇</span>
+              <span class="setting-title">國語發音人聲與試聽</span>
               <span class="setting-desc">優先挑選 iPad 內建臺灣高品質自然語音（zh-TW）</span>
             </div>
-            <select id="setting-voice" class="form-select" style="width: 260px;">
-              <option value="">載入中...</option>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <select id="setting-voice" class="form-select" style="width: 240px;">
+                <option value="">載入中...</option>
+              </select>
+              <button id="btn-test-voice" class="tool-btn" style="white-space: nowrap;">
+                <span>🔊 試聽發音</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">朗讀音量大小</span>
+              <span class="setting-desc">解鎖 iPad 100% 最高音量，聽寫更清晰</span>
+            </div>
+            <select id="setting-speech-volume" class="form-select" style="width: 140px;">
+              <option value="1.0" selected>100% (最大推薦)</option>
+              <option value="0.9">90%</option>
+              <option value="0.8">80%</option>
             </select>
           </div>
 
@@ -1760,6 +1871,63 @@ header.app-header {
               <option value="0.85" selected>標準適中 (0.85x)</option>
               <option value="1.0">一般自然 (1.0x)</option>
             </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">預設測驗題數</span>
+              <span class="setting-desc">每次開啟 App 時預設選擇的出題題數</span>
+            </div>
+            <select id="setting-default-count" class="form-select" style="width: 160px;">
+              <option value="5">5 題</option>
+              <option value="10">10 題</option>
+              <option value="20" selected>20 題 (標準)</option>
+              <option value="all">全部出題</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">預設出題順序</span>
+              <span class="setting-desc">每次開啟 App 時預設選擇的出題順序</span>
+            </div>
+            <select id="setting-default-order" class="form-select" style="width: 160px;">
+              <option value="random" selected>隨機抽題</option>
+              <option value="order">依題庫順序</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">預設計時模式</span>
+              <span class="setting-desc">每次開啟 App 時預設選擇的計時方式</span>
+            </div>
+            <select id="setting-default-timer" class="form-select" style="width: 200px;">
+              <option value="none" selected>不限時 (正向記錄作答)</option>
+              <option value="total">全卷總時長 10 分鐘</option>
+              <option value="per_question">單題倒數 30 秒</option>
+            </select>
+          </div>
+
+          <!-- iPad 聲音與發音優化小提示卡 -->
+          <div style="margin-top: 24px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 16px; color: #166534; font-size: 0.92rem; line-height: 1.6;">
+            <div style="font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 1rem;">
+              <span>💡 iPad 語音音量與標準臺灣發音設定技巧：</span>
+            </div>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li><strong>聲音太小？</strong>除了上方設定為 100% 外，請按 iPad 側邊的<strong>實體音量加鍵</strong>，將媒體音量調至最大。</li>
+              <li><strong>想要像老師一樣標準自然發音？</strong>請前往 iPad 的<strong>「設定」➔「輔助使用」➔「語音內容」➔「聲音」➔「中文 (臺灣)」</strong>，下載<strong>「Siri」</strong>或<strong>「美佳 (增強版)」</strong>高品質人聲，本系統將自動優先採用！</li>
+            </ul>
+          </div>
+
+          <!-- 儲存設定按鈕 -->
+          <div style="margin-top: 28px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+            <button id="btn-save-settings" class="btn-save-settings">
+              <span>💾 儲存設定</span>
+            </button>
+            <div id="save-settings-msg" class="save-settings-msg">
+              <span>✅ 設定已成功儲存！下次開啟將自動保持此設定。</span>
+            </div>
           </div>
         </div>
       </section>
@@ -2162,7 +2330,7 @@ class QuizTimer {
 // === 田字格畫布核心 ===
 /**
  * 田字格 / 米字格 Canvas 手寫核心模組
- * 深度支援 iPad + Apple Pencil 壓感、Retina 像素對齊、筆劃保存與復原
+ * 深度支援 iPad + Apple Pencil 240Hz 高頻採樣、Retina 像素對齊、微位移極速連筆與防手掌誤觸
  */
 class TianZiGeCanvas {
   /**
@@ -2171,14 +2339,14 @@ class TianZiGeCanvas {
    */
   constructor(canvasElement, options = {}) {
     this.canvas = canvasElement;
-    this.ctx = canvasElement.getContext('2d');
+    this.ctx = canvasElement.getContext('2d', { willReadFrequently: true });
     
     this.options = Object.assign({
       gridType: 'tian', // 'tian' (田字格) 或 'mi' (米字格)
       gridColor: '#f43f5e',
       lineColor: '#fca5a5',
       inkColor: '#1e293b',
-      baseStrokeWidth: 4.5,
+      baseStrokeWidth: 4.8,
       pressureSensitive: true,
       penOnly: false, // 是否僅允許 Apple Pencil (防止手掌誤觸)
       onStrokeEnd: null
@@ -2208,6 +2376,7 @@ class TianZiGeCanvas {
 
     this.canvas.style.width = width + 'px';
     this.canvas.style.height = height + 'px';
+    this.canvas.style.touchAction = 'none'; // 強制禁止瀏覽器手勢延遲
 
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.cssWidth = width;
@@ -2216,6 +2385,7 @@ class TianZiGeCanvas {
 
   bindEvents() {
     const el = this.canvas;
+    // 使用 { passive: false } 確保 e.preventDefault() 100% 生效，防止 iOS 瀏覽器手勢攔截與中斷筆劃
     el.addEventListener('pointerdown', (e) => this.onPointerDown(e), { passive: false });
     el.addEventListener('pointermove', (e) => this.onPointerMove(e), { passive: false });
     el.addEventListener('pointerup', (e) => this.onPointerUp(e), { passive: false });
@@ -2237,6 +2407,7 @@ class TianZiGeCanvas {
 
   onPointerDown(e) {
     if (this.isLocked) return;
+    // 若開啟「Apple Pencil 專用模式」，忽略所有手指或手掌誤觸 (touch)
     if (this.options.penOnly && e.pointerType === 'touch') return;
 
     e.preventDefault();
@@ -2250,32 +2421,51 @@ class TianZiGeCanvas {
 
     const pt = this.getPointerPos(e);
     this.currentStroke = [pt];
-    this.drawDot(pt);
+    this.drawDot(pt); // 落筆瞬間立即畫點，0 延遲即時反饋
   }
 
   onPointerMove(e) {
-    if (!this.isDrawing || e.pointerId !== this.currentPointerId) return;
+    if (!this.isDrawing || this.isLocked) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
+
     e.preventDefault();
 
-    const pt = this.getPointerPos(e);
-    const len = this.currentStroke.length;
-    if (len > 0) {
-      const prev = this.currentStroke[len - 1];
-      this.drawSegment(prev, pt);
+    // 關鍵升級：支援 iPad Pro/Air 240Hz 高頻採樣 (getCoalescedEvents)
+    // 快速運筆、連筆、撇捺時，完整捕獲所有中間微小座標點，絕不掉筆劃！
+    const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
+      ? e.getCoalescedEvents()
+      : [e];
+
+    for (const ev of events) {
+      const pt = this.getPointerPos(ev);
+      const len = this.currentStroke.length;
+      if (len > 0) {
+        const lastPt = this.currentStroke[len - 1];
+        const dx = pt.x - lastPt.x;
+        const dy = pt.y - lastPt.y;
+        // 靈敏度門檻：位移 >= 0.5 像素 (平方 >= 0.25) 即時連線繪製，極度靈敏跟筆
+        if (dx * dx + dy * dy >= 0.25) {
+          this.currentStroke.push(pt);
+          this.drawSegment(lastPt, pt);
+        }
+      } else {
+        this.currentStroke.push(pt);
+        this.drawDot(pt);
+      }
     }
-    this.currentStroke.push(pt);
   }
 
   onPointerUp(e) {
-    if (!this.isDrawing || e.pointerId !== this.currentPointerId) return;
+    if (!this.isDrawing) return;
+    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
     e.preventDefault();
+
+    this.isDrawing = false;
+    this.currentPointerId = null;
 
     try {
       this.canvas.releasePointerCapture(e.pointerId);
     } catch (err) {}
-
-    this.isDrawing = false;
-    this.currentPointerId = null;
 
     if (this.currentStroke.length > 0) {
       this.strokes.push([...this.currentStroke]);
@@ -2293,33 +2483,33 @@ class TianZiGeCanvas {
 
   drawDot(pt) {
     const ctx = this.ctx;
-    ctx.save();
+    const p = (pt.pressure !== undefined && pt.pressure > 0) ? pt.pressure : 0.5;
+    // 提升最低筆寬，保證輕觸落筆依然清晰有感
+    const radius = Math.max(1.8, (this.options.baseStrokeWidth * (this.options.pressureSensitive ? (0.65 + p * 0.8) : 1.0)) / 2);
+
     ctx.fillStyle = this.options.inkColor;
-    const radius = (this.options.baseStrokeWidth * (this.options.pressureSensitive ? (pt.pressure || 0.5) : 0.5)) + 1;
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
 
   drawSegment(p1, p2) {
     const ctx = this.ctx;
-    ctx.save();
+    const p = (p1.pressure + p2.pressure) / 2;
+    // 動態筆寬公式：保證輕手快速寫字時筆觸飽滿靈敏，重壓時自然加粗
+    const width = this.options.pressureSensitive
+      ? Math.max(2.8, this.options.baseStrokeWidth * (0.65 + p * 0.8))
+      : this.options.baseStrokeWidth;
+
     ctx.strokeStyle = this.options.inkColor;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-
-    const p = (p1.pressure + p2.pressure) / 2;
-    const width = this.options.pressureSensitive
-      ? this.options.baseStrokeWidth * (0.4 + p * 1.2)
-      : this.options.baseStrokeWidth;
-
     ctx.lineWidth = width;
+
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
-    ctx.restore();
   }
 
   render() {
@@ -2433,6 +2623,7 @@ class TianZiGeCanvas {
     return this.strokes.length > 0;
   }
 }
+
 
 // === 題庫管理模組 ===
 /**
@@ -2875,8 +3066,75 @@ class ExamAppController {
   saveSettings() {
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(this.settings));
+      // 同步共用設定至 gifted_s_settings，確保跨 App 切換時偏好一致
+      const common = {
+        countdownSeconds: this.settings.countdownSeconds,
+        gridType: this.settings.gridType,
+        gridSize: this.settings.gridSize,
+        speechRate: this.settings.speechRate,
+        speechVolume: this.settings.speechVolume,
+        voiceURI: this.settings.voiceURI,
+        penOnly: this.settings.penOnly,
+        soundEffects: this.settings.soundEffects
+      };
+      localStorage.setItem('gifted_s_settings', JSON.stringify(common));
     } catch (e) {}
     this.applySettingsToUI();
+  }
+
+  saveSettingsFromForm() {
+    const inputTimer = document.getElementById('setting-timer');
+    const selectGridSize = document.getElementById('setting-grid-size');
+    const selectGridType = document.getElementById('setting-grid-type');
+    const checkPenOnly = document.getElementById('setting-pen-only');
+    const checkSound = document.getElementById('setting-sound');
+    const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const selectVoice = document.getElementById('setting-voice');
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
+
+    if (inputTimer) {
+      let sec = parseInt(inputTimer.value, 10);
+      if (isNaN(sec) || sec < 5) sec = 5;
+      if (sec > 300) sec = 300;
+      inputTimer.value = sec;
+      this.settings.countdownSeconds = sec;
+    }
+
+    if (selectGridSize) this.settings.gridSize = selectGridSize.value;
+    if (selectGridType) this.settings.gridType = selectGridType.value;
+    if (checkPenOnly) this.settings.penOnly = checkPenOnly.checked;
+    if (checkSound) this.settings.soundEffects = checkSound.checked;
+    if (selectRate) this.settings.speechRate = parseFloat(selectRate.value) || 0.85;
+    if (selectVolume) this.settings.speechVolume = parseFloat(selectVolume.value) || 1.0;
+    if (selectVoice) this.settings.voiceURI = selectVoice.value;
+    if (selectDefaultCount) this.settings.defaultQuestionCount = selectDefaultCount.value;
+    if (selectDefaultOrder) this.settings.randomOrder = (selectDefaultOrder.value === 'random');
+    if (selectDefaultTimer) this.settings.timerMode = selectDefaultTimer.value;
+
+    this.saveSettings();
+
+    // 即刻更新當前所有田字格畫布
+    this.currentCanvases.forEach(c => {
+      c.options.gridType = this.settings.gridType;
+      c.options.penOnly = !!this.settings.penOnly;
+      c.initCanvasSize();
+      c.render();
+    });
+
+    sound.playSuccess();
+
+    // 顯示成功提示訊息
+    const saveMsg = document.getElementById('save-settings-msg');
+    if (saveMsg) {
+      saveMsg.style.display = 'inline-flex';
+      clearTimeout(this.saveMsgTimeout);
+      this.saveMsgTimeout = setTimeout(() => {
+        saveMsg.style.display = 'none';
+      }, 3500);
+    }
   }
 
   applySettingsToUI() {
@@ -2899,6 +3157,10 @@ class ExamAppController {
     const checkPenOnly = document.getElementById('setting-pen-only');
     const checkSound = document.getElementById('setting-sound');
     const selectRate = document.getElementById('setting-speech-rate');
+    const selectVolume = document.getElementById('setting-speech-volume');
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
 
     if (inputTimer && document.activeElement !== inputTimer) inputTimer.value = this.settings.countdownSeconds;
     if (selectGridSize) selectGridSize.value = this.settings.gridSize;
@@ -2906,6 +3168,15 @@ class ExamAppController {
     if (checkPenOnly) checkPenOnly.checked = !!this.settings.penOnly;
     if (checkSound) checkSound.checked = !!this.settings.soundEffects;
     if (selectRate) selectRate.value = this.settings.speechRate;
+    if (selectVolume) selectVolume.value = String(this.settings.speechVolume || 1.0);
+    if (selectDefaultCount) selectDefaultCount.value = this.settings.defaultQuestionCount || '20';
+    if (selectDefaultOrder) selectDefaultOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    if (selectDefaultTimer) selectDefaultTimer.value = this.settings.timerMode || 'none';
+
+    // 同步測驗首頁 (view-start) 下拉選單為上一次/預設設定
+    if (this.selectStartCount) this.selectStartCount.value = this.settings.defaultQuestionCount || '20';
+    if (this.selectStartOrder) this.selectStartOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    if (this.selectStartTimer) this.selectStartTimer.value = this.settings.timerMode || 'none';
 
     this.populateVoiceList();
   }
@@ -3106,7 +3377,36 @@ class ExamAppController {
       this.fileImportInput.addEventListener('change', (e) => this.handleImportBanks(e));
     }
 
-    // 設定表單事件
+    // 儲存設定按鈕 (使用者建議 1：設定好之後，要有儲存按鈕)
+    const btnSaveSettings = document.getElementById('btn-save-settings');
+    if (btnSaveSettings) {
+      btnSaveSettings.addEventListener('click', () => {
+        this.saveSettingsFromForm();
+      });
+    }
+
+    // 試聽發音按鈕
+    const btnTestVoice = document.getElementById('btn-test-voice');
+    if (btnTestVoice) {
+      btnTestVoice.addEventListener('click', () => {
+        sound.playTap();
+        const selectVoice = document.getElementById('setting-voice');
+        if (selectVoice && selectVoice.value) {
+          speech.setVoice(selectVoice.value);
+        }
+        const selectRate = document.getElementById('setting-speech-rate');
+        if (selectRate) {
+          speech.setRate(parseFloat(selectRate.value) || 0.85);
+        }
+        const selectVolume = document.getElementById('setting-speech-volume');
+        if (selectVolume) {
+          speech.setVolume(parseFloat(selectVolume.value) || 1.0);
+        }
+        speech.speak('這是國語生字聽寫測驗的標準發音測試。');
+      });
+    }
+
+    // 設定表單各控制項變更時自動同步
     const inputTimer = document.getElementById('setting-timer');
     if (inputTimer) {
       inputTimer.addEventListener('change', (e) => {
@@ -3158,10 +3458,42 @@ class ExamAppController {
       });
     }
 
+    const selectVolume = document.getElementById('setting-speech-volume');
+    if (selectVolume) {
+      selectVolume.addEventListener('change', (e) => {
+        this.settings.speechVolume = parseFloat(e.target.value) || 1.0;
+        this.saveSettings();
+      });
+    }
+
     const selectVoice = document.getElementById('setting-voice');
     if (selectVoice) {
       selectVoice.addEventListener('change', (e) => {
         this.settings.voiceURI = e.target.value;
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultCount = document.getElementById('setting-default-count');
+    if (selectDefaultCount) {
+      selectDefaultCount.addEventListener('change', (e) => {
+        this.settings.defaultQuestionCount = e.target.value;
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultOrder = document.getElementById('setting-default-order');
+    if (selectDefaultOrder) {
+      selectDefaultOrder.addEventListener('change', (e) => {
+        this.settings.randomOrder = (e.target.value === 'random');
+        this.saveSettings();
+      });
+    }
+
+    const selectDefaultTimer = document.getElementById('setting-default-timer');
+    if (selectDefaultTimer) {
+      selectDefaultTimer.addEventListener('change', (e) => {
+        this.settings.timerMode = e.target.value;
         this.saveSettings();
       });
     }
@@ -3197,6 +3529,17 @@ class ExamAppController {
         this.selectStartBank.appendChild(opt);
       });
     }
+
+    // 每次開啟時，精確還原上一次的設定 (使用者建議 2)
+    if (this.selectStartCount) {
+      this.selectStartCount.value = this.settings.defaultQuestionCount || '20';
+    }
+    if (this.selectStartOrder) {
+      this.selectStartOrder.value = this.settings.randomOrder ? 'random' : 'order';
+    }
+    if (this.selectStartTimer) {
+      this.selectStartTimer.value = this.settings.timerMode || 'none';
+    }
   }
 
   startNewExam(customWords = null, customBankName = null) {
@@ -3220,8 +3563,10 @@ class ExamAppController {
       bankName = bank.name;
       words = [...bank.words];
 
-      // 順序或隨機
+      // 順序或隨機 (自動儲存當前設定，下次開啟保持)
       const isRandom = this.selectStartOrder ? (this.selectStartOrder.value === 'random') : this.settings.randomOrder;
+      this.settings.randomOrder = isRandom;
+
       if (isRandom) {
         for (let i = words.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -3229,14 +3574,23 @@ class ExamAppController {
         }
       }
 
-      // 題數截取
+      // 題數截取 (自動儲存當前設定，下次開啟保持)
       const countVal = this.selectStartCount ? this.selectStartCount.value : '20';
+      this.settings.defaultQuestionCount = countVal;
+
       if (countVal !== 'all') {
         const limit = parseInt(countVal, 10) || 20;
         if (words.length > limit) {
           words = words.slice(0, limit);
         }
       }
+
+      // 計時模式選擇 (自動儲存當前設定，下次開啟保持)
+      const timerMode = this.selectStartTimer ? this.selectStartTimer.value : this.settings.timerMode;
+      this.settings.timerMode = timerMode;
+
+      // 自動持久化儲存偏好
+      this.saveSettings();
     }
 
     // 初始化測驗題目結構
