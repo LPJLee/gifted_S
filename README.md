@@ -13,7 +13,7 @@ gifted_S/
 ├── package.json               # 專案腳本配置
 ├── README.md                  # 本說明文件
 │
-├── dictation/                 # 國語生字聽寫 App
+├── dictation/                 # 國語生字聽寫 App (單題練寫)
 │   ├── index.html             # 單檔離線可用版本
 │   ├── index_template.html    # 構建模板
 │   ├── build_bundle.py        # 單檔打包腳本
@@ -21,6 +21,16 @@ gifted_S/
 │   ├── sw.js                  # Service Worker 離線快取
 │   ├── css/style.css
 │   ├── js/                    # 模組原始碼 (app, canvas, sound, speech, timer, bank, bundle)
+│   └── icons/icon.svg
+│
+├── dictation_exam/            # 國語生字聽寫模擬測驗 App (全新功能：交卷總覽與錯題紀錄)
+│   ├── index.html             # 單檔離線可用版本
+│   ├── index_template.html    # 構建模板
+│   ├── build_bundle.py        # 單檔打包腳本
+│   ├── manifest.json          # PWA 配置
+│   ├── sw.js                  # Service Worker 離線快取
+│   ├── css/style.css
+│   ├── js/                    # 模組原始碼 (app, canvas, sound, speech, timer, bank, records, bundle)
 │   └── icons/icon.svg
 │
 └── math/                      # 數學直式加減運算 App
@@ -45,7 +55,14 @@ gifted_S/
 - **自動計時與防寫鎖定**：倒數計時結束自動防寫鎖定。
 - **對答案與批改結算**：學生手寫筆跡與標準楷體國字對照，支援即時評分。
 
-### 2. 數學直式加減運算 App (`/math`)
+### 2. 國語聽寫模擬測驗 App (`/dictation_exam`)（全新功能）
+- **全卷跳題作答**：過程中支援上一題、下一題或題號列自由切換與跳題，即時保存每個字的 Apple Pencil 筆劃。
+- **交卷前總覽與個別修改**：完成全卷後可選「交卷」，進入總覽清單檢查所有已寫字跡，可針對任一題目點擊「✏️ 修改」單獨重寫。
+- **確定交卷後逐題批改評分**：確定交卷後列出所有寫的內容與標準楷體國字並列對照，由家長或學生手動打勾/打叉評分，並即時統計分數。
+- **純文字錯題記錄與錯題本**：評分完後，自動將有「打叉」的題目生字記錄在錯題本中（輕量純文字儲存，不佔用本機圖片空間）。
+- **錯題專項重測**：可一鍵針對本次打叉題目或歷次高頻錯字立即發起專項測驗。
+
+### 3. 數學直式加減運算 App (`/math`)
 - **雙測驗模式切換**：
   - ⏱️ **總時長模擬測驗模式（全新功能）**：
     - 自訂全卷總時長（如 10 題限時 3 分鐘、5 分鐘或自訂分鐘數/秒數，亦可不限時）。
@@ -86,8 +103,11 @@ python -m http.server 8080
 ### 2. 重新打包單檔
 若修改了 CSS 或 JS 原始檔，可執行打包腳本生成單檔 HTML：
 ```bash
-# 打包聽寫 App
+# 打包聽寫練習 App
 python dictation/build_bundle.py
+
+# 打包聽寫模擬測驗 App
+python dictation_exam/build_bundle.py
 
 # 打包數學 App
 python math/build_bundle.py
