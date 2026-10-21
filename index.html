@@ -123,6 +123,10 @@
       background: linear-gradient(90deg, #3b82f6, #60a5fa);
     }
 
+    .card-dictation-exam::before {
+      background: linear-gradient(90deg, #4f46e5, #818cf8);
+    }
+
     .card-exam::before {
       background: linear-gradient(90deg, #8b5cf6, #a78bfa);
     }
@@ -147,6 +151,12 @@
       background: #eff6ff;
       color: #2563eb;
       border: 1px solid #bfdbfe;
+    }
+
+    .icon-dictation-exam {
+      background: #eef2ff;
+      color: #4f46e5;
+      border: 1px solid #c7d2fe;
     }
 
     .icon-exam {
@@ -227,6 +237,15 @@
       box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
     }
 
+    .btn-dictation-exam {
+      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    }
+
+    .btn-dictation-exam:hover {
+      background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+    }
+
     .btn-exam {
       background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
     }
@@ -275,19 +294,40 @@
       <div class="card card-dictation">
         <div>
           <div class="icon-wrapper icon-dictation">✍️</div>
-          <h2>國語生字聽寫</h2>
+          <h2>國語生字聽寫 (單題)</h2>
           <p class="card-desc">
             內建標準國語生字庫、真人清晰臺灣發音、Apple Pencil 極速手寫田字格。支援自動計時、詞語例句與錯字收藏訂正。
           </p>
           <div class="tags">
             <span class="tag">田字格手寫</span>
             <span class="tag">生字朗讀</span>
-            <span class="tag">筆順練習</span>
+            <span class="tag">單題即時練寫</span>
             <span class="tag">自訂題庫</span>
           </div>
         </div>
         <a href="./dictation/index.html" class="btn btn-dictation">
           進入聽寫練習 ➔
+        </a>
+      </div>
+
+      <!-- 國語生字模擬測驗 Card (新開功能：交卷總覽與錯題紀錄) -->
+      <div class="card card-dictation-exam">
+        <div>
+          <div class="icon-wrapper icon-dictation-exam">📝</div>
+          <h2>國語聽寫模擬測驗</h2>
+          <p class="card-desc">
+            整卷全出作答支援前後跳題！寫完後進入「交卷總覽」逐題檢查與個別修改，確定交卷後統一逐題批改打叉，並自動記錄錯題文字於錯題本中。
+          </p>
+          <div class="tags">
+            <span class="tag">全卷跳題作答</span>
+            <span class="tag">交卷前總覽</span>
+            <span class="tag">個別點擊修改</span>
+            <span class="tag">逐題批改打叉</span>
+            <span class="tag">錯題純文字紀錄</span>
+          </div>
+        </div>
+        <a href="./dictation_exam/index.html" class="btn btn-dictation-exam">
+          進入模擬測驗 ➔
         </a>
       </div>
 

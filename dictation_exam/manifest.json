@@ -1,0 +1,17 @@
+{
+  "name": "國語生字聽寫測驗",
+  "short_name": "國語測驗",
+  "description": "支援交卷總覽、個別修改、逐題批改與錯題紀錄的國語聽寫測驗 App",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>國語生字聽寫測驗 - iPad 手寫田字格</title>
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="國語測驗">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- 內嵌樣式表 -->
+  <!-- INJECT_STYLE -->
+</head>
+<body>
+  <div id="app">
+    <!-- 頂部功能導覽列 -->
+    <header class="app-header">
+      <div class="brand">
+        <a href="../index.html" class="nav-hub-btn" title="返回學習大廳">
+          <span>←</span> 學習大廳
+        </a>
+        <div class="brand-icon">考</div>
+        <div class="brand-title">國語生字測驗</div>
+      </div>
+      <nav class="nav-tabs">
+        <button class="nav-btn active" data-view="quiz">
+          <span>📝</span> <span>聽寫測驗</span>
+        </button>
+        <button class="nav-btn" data-view="records">
+          <span>📋</span> <span>測驗紀錄</span>
+        </button>
+        <button class="nav-btn" data-view="banks">
+          <span>📚</span> <span>題庫管理</span>
+        </button>
+        <button class="nav-btn" data-view="settings">
+          <span>⚙️</span> <span>設定</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- 主要內容視圖 -->
+    <main class="main-content">
+
+      <!-- ================= 視圖 1: 測驗首頁與自訂出題 (Start) ================= -->
+      <section id="view-start" class="view-screen active">
+        <div class="start-setup-card">
+          <div class="setup-header">
+            <h1 class="setup-title">國語生字模擬測驗</h1>
+            <p class="setup-desc">專為 iPad 設計的國語聽寫測驗！支援作答中自由前後跳題檢查、交卷前總覽與個別修改、確定交卷後逐題手動批改打叉，並自動記錄錯題文字！</p>
+          </div>
+
+          <div class="setup-grid">
+            <div class="setup-item">
+              <label class="setup-label">📚 測驗題庫</label>
+              <select id="start-bank-select" class="form-select"></select>
+            </div>
+
+            <div class="setup-item">
+              <label class="setup-label">🔢 測驗題數</label>
+              <select id="start-count-select" class="form-select">
+                <option value="5">5 題 (快速隨測)</option>
+                <option value="10">10 題 (日常練習)</option>
+                <option value="20" selected>20 題 (標準測驗)</option>
+                <option value="all">全部出題</option>
+              </select>
+            </div>
+
+            <div class="setup-item">
+              <label class="setup-label">🔀 出題順序</label>
+              <select id="start-order-select" class="form-select">
+                <option value="random" selected>隨機抽題</option>
+                <option value="order">依照題庫順序</option>
+              </select>
+            </div>
+
+            <div class="setup-item">
+              <label class="setup-label">⏱️ 計時模式</label>
+              <select id="start-timer-select" class="form-select">
+                <option value="none" selected>不限時 (正向記錄作答時間)</option>
+                <option value="total">全卷總時長 10 分鐘</option>
+                <option value="per_question">單題倒數 30 秒</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="start-actions">
+            <button id="btn-start-exam" class="btn-start-exam">
+              <span>🚀 開始聽寫測驗</span>
+            </button>
+            <button id="btn-view-records-direct" class="tool-btn" style="background: transparent; border: none; color: #6366f1;">
+              <span>📋 查看歷史測驗紀錄與錯題本 ➔</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 視圖 2: 聽寫書寫測驗 (Quiz) ================= -->
+      <section id="view-quiz" class="view-screen">
+        <div class="quiz-top-bar">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="quiz-progress-text" class="quiz-progress-text">第 1 題 / 共 20 題</span>
+            <span id="quiz-bank-badge" class="bank-badge">常用生字</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div id="timer-pill" class="timer-pill">
+              <span>⏱️</span>
+              <span id="timer-text">00:00</span>
+            </div>
+            <button id="btn-quiz-submit-head" class="btn-quiz-submit-head">
+              <span>📋 交卷審查</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 題號快速跳轉列 -->
+        <div id="exam-pill-strip" class="exam-pill-strip">
+          <!-- 由 JS 動態生成 [1] [2] ... [20] -->
+        </div>
+
+        <!-- 個別修改狀態提示條 (從總覽點修改時顯示) -->
+        <div id="editing-banner" class="editing-banner">
+          <span>✏️ 正在修改第 <span id="editing-q-num">1</span> 題，修改完成後點擊按鈕返回總覽</span>
+          <button id="btn-finish-edit" class="btn-finish-edit">✔ 修改完成，返回總覽 📋</button>
+        </div>
+
+        <!-- 田字格手寫主舞台 -->
+        <div class="canvas-stage">
+          <div id="tian-grid-container" class="tian-grid-container">
+            <!-- 由 JavaScript 動態生成 Canvas -->
+          </div>
+
+          <!-- 畫布輔助按鈕 -->
+          <div class="canvas-action-bar">
+            <button id="btn-clear-canvas" class="tool-btn danger">
+              <span>🗑️</span> 清除重寫
+            </button>
+            <button id="btn-undo-stroke" class="tool-btn">
+              <span>↩️</span> 復原筆劃
+            </button>
+          </div>
+        </div>
+
+        <!-- 底部核心按鈕 -->
+        <div class="quiz-footer-bar">
+          <button id="btn-quiz-prev" class="btn-quiz-prev" disabled>
+            <span>⬅ 上一題</span>
+          </button>
+          <button id="btn-play-voice" class="btn-play-voice">
+            <span>🔊 播放發音</span>
+          </button>
+          <button id="btn-quiz-next" class="btn-quiz-next">
+            <span>下一題 ➔</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= 視圖 3: 交卷前總覽與個別修改 (Review) ================= -->
+      <section id="view-review" class="view-screen">
+        <div class="review-header-card">
+          <div>
+            <h2 class="panel-title">📋 測驗交卷前總覽</h2>
+            <p class="panel-subtitle">請檢查各題手寫字跡，可點擊「✏️ 修改此題」返回重新書寫。確認無誤後，請點擊「確定交卷，開始評分」。</p>
+          </div>
+          <div id="review-stat-badge" class="review-stat-badge">已完成：20 / 20 題</div>
+        </div>
+
+        <!-- 所有題目的總覽卡片清單 -->
+        <div id="review-grid" class="review-grid">
+          <!-- 由 JS 動態生成每題卡片 -->
+        </div>
+
+        <!-- 底部交卷確認列 -->
+        <div class="review-footer-bar">
+          <button id="btn-review-back" class="tool-btn" style="padding: 14px 24px; font-size: 1.1rem;">
+            <span>⬅ 返回繼續作答</span>
+          </button>
+          <button id="btn-confirm-submit" class="btn-confirm-submit">
+            <span>確定交卷，開始評分 ➔</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= 視圖 4: 確定交卷後批改評分 (Grading) ================= -->
+      <section id="view-grading" class="view-screen">
+        <!-- 即時得分計數浮動列 -->
+        <div class="grading-sticky-header">
+          <div>
+            <div id="grading-live-score" class="grading-live-score">目前得分: 100 分</div>
+            <div style="font-size: 0.85rem; color: #64748b;">請逐題核對標準楷體與手寫筆劃，點擊打勾或打叉</div>
+          </div>
+          <div class="grading-count-tags">
+            <span id="grade-correct-count" class="grade-badge-correct">✔ 正確: 20 題</span>
+            <span id="grade-wrong-count" class="grade-badge-wrong">✖ 打叉: 0 題</span>
+          </div>
+        </div>
+
+        <!-- 逐題核對與評分清單 -->
+        <div id="grading-list" class="grading-list">
+          <!-- 由 JS 動態注入 -->
+        </div>
+
+        <div class="grading-footer-bar">
+          <button id="btn-finish-grading" class="btn-finish-grading">
+            <span>💾 完成評分並儲存紀錄 ➔</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= 視圖 5: 結算與錯題展示 (Result) ================= -->
+      <section id="view-result" class="view-screen">
+        <div class="result-banner-card">
+          <div class="result-score-title">🏆 測驗評分結算</div>
+          <div id="result-score-num" class="result-score-number">100 分</div>
+          <p id="result-score-praise" style="font-size: 1.15rem; font-weight: 700; color: #e0e7ff; margin-top: 4px;">太棒了！滿分全對！</p>
+          <div class="result-stats-row">
+            <span id="result-total-count" class="result-stat-item">共 20 題</span>
+            <span id="result-correct-count" class="result-stat-item">答對 20 題</span>
+            <span id="result-wrong-count" class="result-stat-item">打叉 0 題</span>
+            <span id="result-time-spent" class="result-stat-item">用時 120 秒</span>
+          </div>
+        </div>
+
+        <!-- 錯題文字記錄專區 -->
+        <div class="wrong-words-section">
+          <h3 class="panel-title">❌ 本次打叉錯題紀錄</h3>
+          <p class="panel-subtitle">系統已自動為您記錄以下打叉題目的生字文字（不存筆跡圖像，輕量省空間）：</p>
+          <div id="wrong-words-container" style="margin-top: 14px;">
+            <!-- 由 JS 動態注入錯題文字 -->
+          </div>
+        </div>
+
+        <!-- 結果頁操作按鈕 -->
+        <div class="result-actions">
+          <button id="btn-retest-wrong-words" class="btn-confirm-submit" style="display: none; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);">
+            <span>🎯 立即測驗本次錯題</span>
+          </button>
+          <button id="btn-retest-all" class="btn-confirm-submit">
+            <span>🔄 再測一次 (原題庫)</span>
+          </button>
+          <button id="btn-view-records-from-result" class="tool-btn" style="padding: 14px 22px; font-size: 1.1rem;">
+            <span>📋 查看歷次紀錄與錯題本</span>
+          </button>
+          <a href="../index.html" class="tool-btn" style="padding: 14px 22px; font-size: 1.1rem; text-decoration: none;">
+            <span>🏠 返回學習大廳</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ================= 視圖 6: 歷次紀錄與錯題本 (Records) ================= -->
+      <section id="view-records" class="view-screen">
+        <div class="panel-card">
+          <h2 class="panel-title">📊 測驗總覽統計</h2>
+          <div class="stats-summary-grid" style="margin-top: 14px;">
+            <div class="stat-box">
+              <span class="stat-box-title">累計測驗次數</span>
+              <span id="stat-total-tests" class="stat-box-num">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-box-title">平均測驗得分</span>
+              <span id="stat-avg-score" class="stat-box-num">0 分</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-box-title">累積打叉錯題</span>
+              <span id="stat-total-wrong" class="stat-box-num">0 題</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 常見易錯字排行榜 -->
+        <div class="panel-card">
+          <h3 class="panel-title">🔥 常見易錯字排行 (錯題本)</h3>
+          <p class="panel-subtitle">統計歷次測驗中打叉次數最多的生字與詞語：</p>
+          <div id="ranking-pills-wrap" class="ranking-pills-wrap">
+            <!-- 由 JS 動態生成 -->
+          </div>
+        </div>
+
+        <!-- 歷次測驗詳細清單 -->
+        <div class="panel-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 class="panel-title">📜 歷次測驗紀錄</h3>
+              <p class="panel-subtitle">依時間順序記錄每一次測驗的得分與錯字文字：</p>
+            </div>
+            <button id="btn-clear-all-records" class="tool-btn danger" style="font-size: 0.85rem;">
+              <span>🗑️ 清空所有紀錄</span>
+            </button>
+          </div>
+
+          <div id="history-records-list" class="history-records-list">
+            <!-- 由 JS 動態注入每筆紀錄 -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 視圖 7: 題庫管理 (Banks) ================= -->
+      <section id="view-banks" class="view-screen">
+        <div class="panel-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+            <div>
+              <h2 class="panel-title">📚 生字題庫管理</h2>
+              <p class="panel-subtitle">題庫與國語聽寫練習共用，可自訂詞語，測驗時自由選用。</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button id="btn-new-bank" class="tool-btn primary">
+                <span>➕</span> 新增題庫
+              </button>
+              <button id="btn-export-banks" class="tool-btn">
+                <span>📤</span> 匯出備份
+              </button>
+              <label class="tool-btn" style="cursor: pointer; margin: 0;">
+                <span>📥</span> 匯入題庫
+                <input id="file-import-input" type="file" accept=".json" style="display: none;">
+              </label>
+            </div>
+          </div>
+
+          <div id="bank-list-container" class="bank-list-grid">
+            <!-- 由 JS 動態注入 -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 視圖 8: 偏好設定 (Settings) ================= -->
+      <section id="view-settings" class="view-screen">
+        <div class="panel-card">
+          <h2 class="panel-title">⚙️ 測驗與手寫偏好設定</h2>
+          <p class="panel-subtitle">調整適合您 iPad 與書寫習慣的參數，設定會自動儲存。</p>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">單題倒數秒數</span>
+              <span class="setting-desc">若測驗選擇「單題倒數」模式時的每題秒數</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="number" id="setting-timer" class="form-input" min="5" max="300" step="1" style="width: 100px; text-align: center; font-weight: 700;" value="30">
+              <span style="font-weight: 700; color: #475569;">秒</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">田字格顯示尺寸</span>
+              <span class="setting-desc">iPad 螢幕手寫建議使用「舒適手寫尺寸 (150px)」</span>
+            </div>
+            <select id="setting-grid-size" class="form-select" style="width: 190px;">
+              <option value="compact">標準 2cm (80px)</option>
+              <option value="comfortable" selected>舒適手寫 (150px 推薦)</option>
+              <option value="large">加大手寫 (200px)</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">輔助線樣式</span>
+              <span class="setting-desc">選擇傳統田字格或附帶對角線的米字格</span>
+            </div>
+            <select id="setting-grid-type" class="form-select" style="width: 140px;">
+              <option value="tian" selected>田字格</option>
+              <option value="mi">米字格</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">Apple Pencil 專用模式 (防手掌誤觸)</span>
+              <span class="setting-desc">開啟後田字格僅接收 Apple Pencil 筆尖觸控，徹底防止手掌貼在螢幕時誤畫</span>
+            </div>
+            <label style="position: relative; display: inline-block; width: 52px; height: 30px;">
+              <input type="checkbox" id="setting-pen-only" style="opacity: 0; width: 0; height: 0;">
+              <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; border-radius: 34px; transition: .3s;" onclick="this.previousElementSibling.click()"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">互動提示音效</span>
+              <span class="setting-desc">按鈕點擊、交卷、評分打勾打叉與完成慶祝音效</span>
+            </div>
+            <label style="position: relative; display: inline-block; width: 52px; height: 30px;">
+              <input type="checkbox" id="setting-sound" checked style="opacity: 0; width: 0; height: 0;">
+              <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4f46e5; border-radius: 34px; transition: .3s;" onclick="this.previousElementSibling.click()"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">國語發音人聲選擇</span>
+              <span class="setting-desc">優先挑選 iPad 內建臺灣高品質自然語音（zh-TW）</span>
+            </div>
+            <select id="setting-voice" class="form-select" style="width: 260px;">
+              <option value="">載入中...</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-title">朗讀語速調節</span>
+              <span class="setting-desc">生字聽寫建議採用 0.85 稍慢語速以聽清聲調與發音</span>
+            </div>
+            <select id="setting-speech-rate" class="form-select" style="width: 140px;">
+              <option value="0.75">緩慢 (0.75x)</option>
+              <option value="0.85" selected>標準適中 (0.85x)</option>
+              <option value="1.0">一般自然 (1.0x)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 內嵌 JavaScript 腳本 -->
+  <!-- INJECT_SCRIPT -->
+</body>
+</html>
