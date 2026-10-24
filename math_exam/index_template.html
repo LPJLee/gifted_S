@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>數學加減模擬測驗 - 題庫與總題數測驗</title>
+  <title>數學簡單測驗 - 題庫與總題數測驗</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -26,7 +26,7 @@
           <span>←</span> 學習大廳
         </a>
         <div class="brand-icon">🧮</div>
-        <div class="brand-title">數學加減模擬測驗</div>
+        <div class="brand-title">數學簡單測驗</div>
       </div>
       <nav class="nav-tabs">
         <button class="nav-btn active" data-view="quiz">
@@ -51,9 +51,9 @@
       <section id="view-start" class="view-screen active">
         <div class="start-setup-card">
           <div class="setup-header">
-            <h1 class="setup-title">數學加減模擬測驗</h1>
+            <h1 class="setup-title">數學簡單測驗</h1>
             <p class="setup-desc">
-              專為小學低年級與 iPad 設計！涵蓋<strong>個位數加個位數（可進位）</strong>與<strong>十幾減個位數（必退位）</strong>核心題型。支援自由跳題、iPad 直式計算草稿板、交卷前總覽核對、自動批改與錯題專項重測！
+              專為小學低年級與 iPad 設計！涵蓋<strong>個位數加個位數（可進位）</strong>與<strong>十幾減個位數（必退位）</strong>核心題型。支援自由跳題、交卷前總覽核對、自動批改與錯題專項重測！
             </p>
           </div>
 
@@ -141,87 +141,49 @@
           <button id="btn-finish-edit" class="btn-finish-edit">✔ 修改完成，返回總覽 📋</button>
         </div>
 
-        <!-- 雙欄作答主舞台 (左側算式與按鈕，右側直式草稿板) -->
-        <div class="quiz-main-stage">
-          <!-- 左欄：算式與作答輸入 -->
-          <div class="quiz-left-panel">
-            <div class="problem-card">
-              <div class="problem-header">
-                <span class="problem-type-tag" id="problem-type-tag">進位加法</span>
-                <span class="problem-hint" id="problem-hint">請在下方填入正確答案</span>
-              </div>
-              <div id="problem-formula" class="problem-formula">8 + 7 = ?</div>
-              
-              <!-- 答案輸入框 -->
-              <div class="answer-box-wrap">
-                <span class="answer-box-label">答案：</span>
-                <div id="answer-display" class="answer-display">?</div>
-              </div>
+        <!-- 簡單測驗作答舞台 (算式與數字大鍵盤) -->
+        <div class="quiz-single-stage">
+          <div class="problem-card">
+            <div class="problem-header">
+              <span class="problem-type-tag" id="problem-type-tag">進位加法</span>
+              <span class="problem-hint" id="problem-hint">請在下方填入正確答案</span>
             </div>
-
-            <!-- 虛擬數字大鍵盤 (觸控極佳，iPad 與滑鼠通用) -->
-            <div class="keypad-grid">
-              <button class="key-btn" data-key="1">1</button>
-              <button class="key-btn" data-key="2">2</button>
-              <button class="key-btn" data-key="3">3</button>
-              <button class="key-btn" data-key="4">4</button>
-              <button class="key-btn" data-key="5">5</button>
-              <button class="key-btn" data-key="6">6</button>
-              <button class="key-btn" data-key="7">7</button>
-              <button class="key-btn" data-key="8">8</button>
-              <button class="key-btn" data-key="9">9</button>
-              <button class="key-btn func-key" data-key="backspace">⌫ 退格</button>
-              <button class="key-btn" data-key="0">0</button>
-              <button class="key-btn submit-key" data-key="enter">✓ 下一題</button>
-            </div>
-
-            <!-- 底部換題控制列 -->
-            <div class="quiz-nav-row">
-              <button id="btn-quiz-prev" class="quiz-step-btn" disabled>
-                <span>⬅ 上一題</span>
-              </button>
-              <button id="btn-clear-input" class="tool-btn" style="padding: 10px 18px;">
-                <span>清空輸入</span>
-              </button>
-              <button id="btn-quiz-next" class="quiz-step-btn primary">
-                <span>下一題 ➔</span>
-              </button>
+            <div id="problem-formula" class="problem-formula">8 + 7 = ?</div>
+            
+            <!-- 答案輸入框 -->
+            <div class="answer-box-wrap">
+              <span class="answer-box-label">答案：</span>
+              <div id="answer-display" class="answer-display">?</div>
             </div>
           </div>
 
-          <!-- 右欄：Apple Pencil 直式計算草稿板 -->
-          <div class="quiz-right-panel">
-            <div class="scratchpad-header">
-              <div class="scratchpad-title">
-                <span>📝 直式計算草稿板</span>
-                <small style="color: #64748b; font-size: 0.8rem;">(支援 Apple Pencil 手寫借位劃線與計算)</small>
-              </div>
-              <div class="scratchpad-tools">
-                <button id="btn-stamp-formula" class="canvas-tool-btn" title="將題目直式印到草稿紙上">
-                  <span>📌 蓋印直式</span>
-                </button>
-                <div class="tool-sep"></div>
-                <button id="btn-canvas-pen" class="canvas-tool-btn active" title="鉛筆">✏️</button>
-                <button id="btn-canvas-eraser" class="canvas-tool-btn" title="橡皮擦">🧹</button>
-                <div class="tool-sep"></div>
-                <button id="btn-canvas-undo" class="canvas-tool-btn" title="復原上一筆">↩️</button>
-                <button id="btn-canvas-clear" class="canvas-tool-btn danger" title="清空草稿">🗑️</button>
-              </div>
-            </div>
+          <!-- 虛擬數字大鍵盤 (觸控極佳，iPad 與滑鼠通用) -->
+          <div class="keypad-grid">
+            <button class="key-btn" data-key="1">1</button>
+            <button class="key-btn" data-key="2">2</button>
+            <button class="key-btn" data-key="3">3</button>
+            <button class="key-btn" data-key="4">4</button>
+            <button class="key-btn" data-key="5">5</button>
+            <button class="key-btn" data-key="6">6</button>
+            <button class="key-btn" data-key="7">7</button>
+            <button class="key-btn" data-key="8">8</button>
+            <button class="key-btn" data-key="9">9</button>
+            <button class="key-btn func-key" data-key="backspace">⌫ 退格</button>
+            <button class="key-btn" data-key="0">0</button>
+            <button class="key-btn submit-key" data-key="enter">✓ 下一題</button>
+          </div>
 
-            <div class="scratchpad-canvas-wrap">
-              <canvas id="scratchpad-canvas"></canvas>
-            </div>
-
-            <div class="scratchpad-footer">
-              <div class="grid-mode-selector">
-                <span>底格：</span>
-                <button class="grid-mode-btn active" data-grid="vertical">直式對齊線</button>
-                <button class="grid-mode-btn" data-grid="grid">方格紙</button>
-                <button class="grid-mode-btn" data-grid="blank">空白紙</button>
-              </div>
-              <span style="font-size: 0.8rem; color: #94a3b8;">每題草稿筆劃自動快取保存</span>
-            </div>
+          <!-- 底部換題控制列 -->
+          <div class="quiz-nav-row">
+            <button id="btn-quiz-prev" class="quiz-step-btn" disabled>
+              <span>⬅ 上一題</span>
+            </button>
+            <button id="btn-clear-input" class="tool-btn" style="padding: 10px 18px;">
+              <span>清空輸入</span>
+            </button>
+            <button id="btn-quiz-next" class="quiz-step-btn primary">
+              <span>下一題 ➔</span>
+            </button>
           </div>
         </div>
       </section>
@@ -387,18 +349,10 @@
       <!-- ================= 視圖 7: 設定 (Settings) ================= -->
       <section id="view-settings" class="view-screen">
         <div class="panel-card">
-          <h2 class="panel-title">⚙️ 偏好與觸控設定</h2>
-          <p class="panel-subtitle">調整 iPad Apple Pencil 手寫、音效與測驗預設選項：</p>
+          <h2 class="panel-title">⚙️ 偏好與測驗設定</h2>
+          <p class="panel-subtitle">調整音效與測驗預設選項：</p>
 
           <div class="settings-list" style="margin-top: 20px;">
-            <div class="setting-item">
-              <div class="setting-info">
-                <span class="setting-title">✏️ Apple Pencil 專用手寫模式 (防手掌誤觸)</span>
-                <span class="setting-desc">開啟後，草稿板僅接受 Apple Pencil 筆尖書寫，手指手掌碰觸畫布不會留下筆跡。</span>
-              </div>
-              <input id="setting-pen-only" type="checkbox" class="form-toggle">
-            </div>
-
             <div class="setting-item">
               <div class="setting-info">
                 <span class="setting-title">🔊 原生合成音效</span>
@@ -445,21 +399,23 @@
 
     </main>
 
-    <!-- ================= 彈窗 1: 查看題目清單 Modal ================= -->
+    <!-- ================= 彈窗 1: 查看題目清單 Modal (畫面最大化) ================= -->
     <div id="modal-bank-problems" class="modal-overlay">
-      <div class="modal-box" style="max-width: 600px;">
+      <div class="modal-box modal-box-max">
         <div class="modal-header">
-          <h3 id="modal-bank-title" class="modal-title">題庫內容</h3>
-          <button class="modal-close-btn" data-close="modal-bank-problems">✕</button>
+          <div>
+            <h3 id="modal-bank-title" class="modal-title" style="font-size: 1.45rem;">題庫內容</h3>
+            <p id="modal-bank-desc" style="color: #64748b; font-size: 1.05rem; margin-top: 4px;"></p>
+          </div>
+          <button class="modal-close-btn" data-close="modal-bank-problems" style="font-size: 1.8rem; padding: 6px 14px;">✕</button>
         </div>
-        <div class="modal-body">
-          <p id="modal-bank-desc" style="color: #64748b; font-size: 0.95rem; margin-bottom: 12px;"></p>
-          <div id="modal-bank-problems-grid" class="problems-preview-grid">
+        <div class="modal-body modal-body-max">
+          <div id="modal-bank-problems-grid" class="problems-preview-grid-max">
             <!-- 由 JS 動態生成題目膠囊 -->
           </div>
         </div>
         <div class="modal-footer">
-          <button class="tool-btn" data-close="modal-bank-problems">關閉</button>
+          <button class="tool-btn" data-close="modal-bank-problems" style="padding: 12px 28px; font-size: 1.1rem; font-weight: 700;">關閉</button>
         </div>
       </div>
     </div>
@@ -495,22 +451,6 @@
         <div class="modal-footer">
           <button class="tool-btn" data-close="modal-add-bank">取消</button>
           <button id="btn-save-new-bank" class="btn-confirm-submit" style="padding: 10px 20px;">建立題庫</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= 彈窗 3: 查看手寫草稿快照 Modal ================= -->
-    <div id="modal-snapshot" class="modal-overlay">
-      <div class="modal-box" style="max-width: 650px;">
-        <div class="modal-header">
-          <h3 id="modal-snapshot-title" class="modal-title">手寫草稿筆劃檢視</h3>
-          <button class="modal-close-btn" data-close="modal-snapshot">✕</button>
-        </div>
-        <div class="modal-body" style="text-align: center;">
-          <img id="modal-snapshot-img" src="" alt="手寫計算草稿" style="max-width: 100%; max-height: 450px; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-        </div>
-        <div class="modal-footer">
-          <button class="tool-btn" data-close="modal-snapshot">關閉</button>
         </div>
       </div>
     </div>

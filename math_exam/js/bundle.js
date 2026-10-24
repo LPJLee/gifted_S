@@ -240,488 +240,6 @@ class QuizTimer {
 }
 
 
-// === 直式手寫草稿板 ===
-/**
- * 直式手寫草稿板 (Scratchpad Canvas)
- * 深度適配 iPad + Apple Pencil：
- * 1. 240Hz 高頻採樣 (getCoalescedEvents)、落筆即時成點與即時連線
- * 2. 數學對齊：個位、十位與垂直導引虛線、欄位標籤精準對齊
- * 3. 支援進退位輔助標註區、蓋印題目、橡皮擦、復原 (Undo) 與筆跡快照
- */
-
-class ScratchpadCanvas {
-  /**
-   * @param {HTMLCanvasElement} canvasElement 
-   * @param {Object} options 
-   */
-  constructor(canvasElement, options = {}) {
-    this.canvas = canvasElement;
-    this.ctx = canvasElement.getContext('2d');
-
-    this.options = Object.assign({
-      gridType: 'vertical', // 'vertical' (直式對齊線), 'grid' (方格紙), 'blank' (空白)
-      penColor: '#1e293b',
-      penWidth: 4,
-      baseStrokeWidth: 4,
-      pressureSensitive: true,
-      penOnly: false, // 是否僅允許 Apple Pencil (防手掌誤觸)
-      onStrokeEnd: null
-    }, options);
-
-    this.isDrawing = false;
-    this.isEraser = false;
-    this.isLocked = false;
-    this.currentPointerId = null;
-    this.strokes = []; // [ { color, width, isEraser, points: [{x,y,pressure,pointerType}] } ]
-    this.currentStroke = [];
-    this.stampedProblem = null; // 儲存蓋印的題目
-
-    this.dpr = window.devicePixelRatio || 1;
-    this.initCanvasSize();
-    this.bindEvents();
-    this.render();
-
-    window.addEventListener('resize', () => this.handleResize());
-  }
-
-  initCanvasSize() {
-    const rect = this.canvas.getBoundingClientRect();
-    const width = Math.round(rect.width || 600);
-    const height = Math.round(rect.height || 500);
-
-    this.dpr = window.devicePixelRatio || 1;
-
-    this.canvas.width = Math.round(width * this.dpr);
-    this.canvas.height = Math.round(height * this.dpr);
-
-    this.canvas.style.width = width + 'px';
-    this.canvas.style.height = height + 'px';
-
-    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this.cssWidth = width;
-    this.cssHeight = height;
-  }
-
-  handleResize() {
-    this.initCanvasSize();
-    this.render();
-  }
-
-  bindEvents() {
-    const el = this.canvas;
-    el.addEventListener('pointerdown', (e) => this.onPointerDown(e), { passive: false });
-    el.addEventListener('pointermove', (e) => this.onPointerMove(e), { passive: false });
-    el.addEventListener('pointerup', (e) => this.onPointerUp(e), { passive: false });
-    el.addEventListener('pointercancel', (e) => this.onPointerCancel(e), { passive: false });
-  }
-
-  getPointerPos(e) {
-    const rect = this.canvas.getBoundingClientRect();
-    const scaleX = rect.width > 0 ? (this.cssWidth / rect.width) : 1;
-    const scaleY = rect.height > 0 ? (this.cssHeight / rect.height) : 1;
-
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-      pressure: (e.pressure !== undefined && e.pressure > 0) ? e.pressure : 0.5,
-      pointerType: e.pointerType
-    };
-  }
-
-  onPointerDown(e) {
-    if (this.isLocked) return;
-
-    if (this.options.penOnly && e.pointerType === 'touch') {
-      return;
-    }
-
-    e.preventDefault();
-
-    try {
-      this.canvas.setPointerCapture(e.pointerId);
-    } catch (err) {}
-
-    this.isDrawing = true;
-    this.currentPointerId = e.pointerId;
-
-    const pt = this.getPointerPos(e);
-    this.currentStroke = [pt];
-    this.drawDot(pt);
-  }
-
-  onPointerMove(e) {
-    if (!this.isDrawing || this.isLocked) return;
-    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
-
-    e.preventDefault();
-
-    const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
-      ? e.getCoalescedEvents()
-      : [e];
-
-    for (const ev of events) {
-      const pt = this.getPointerPos(ev);
-      const lastPt = this.currentStroke[this.currentStroke.length - 1];
-
-      if (lastPt) {
-        const dx = pt.x - lastPt.x;
-        const dy = pt.y - lastPt.y;
-        if (dx * dx + dy * dy >= 0.25) {
-          this.currentStroke.push(pt);
-          this.drawSegment(lastPt, pt);
-        }
-      } else {
-        this.currentStroke.push(pt);
-      }
-    }
-  }
-
-  onPointerUp(e) {
-    if (!this.isDrawing) return;
-    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
-
-    this.isDrawing = false;
-    this.currentPointerId = null;
-
-    try {
-      this.canvas.releasePointerCapture(e.pointerId);
-    } catch (err) {}
-
-    if (this.currentStroke.length > 0) {
-      this.strokes.push({
-        color: this.options.penColor,
-        width: this.options.penWidth,
-        isEraser: this.isEraser,
-        points: [...this.currentStroke]
-      });
-      this.currentStroke = [];
-    }
-
-    if (this.options.onStrokeEnd) {
-      this.options.onStrokeEnd();
-    }
-  }
-
-  onPointerCancel(e) {
-    this.onPointerUp(e);
-  }
-
-  drawDot(pt) {
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.fillStyle = this.isEraser ? '#ffffff' : this.options.penColor;
-    ctx.beginPath();
-
-    const baseW = this.options.penWidth || 4;
-    const radius = this.isEraser
-      ? (baseW * 4.0) / 2
-      : (baseW * (0.6 + pt.pressure * 0.8)) / 2;
-
-    ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  drawSegment(p1, p2) {
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.strokeStyle = this.isEraser ? '#ffffff' : this.options.penColor;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    const baseW = this.options.penWidth || 4;
-    let lineWidth = baseW;
-    if (this.isEraser) {
-      lineWidth = baseW * 4.0;
-    } else if (this.options.pressureSensitive && p2.pointerType === 'pen') {
-      lineWidth = baseW * (0.5 + p2.pressure * 1.0);
-    } else {
-      lineWidth = baseW * 0.9;
-    }
-    ctx.lineWidth = lineWidth;
-
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  getColumnMetrics() {
-    const w = this.cssWidth;
-    const h = this.cssHeight;
-    const columnCount = 5; // [0: 符號, 1: 千位, 2: 百位, 3: 十位, 4: 個位]
-
-    const colWidth = Math.min(88, Math.max(68, Math.floor((w - 50) / (columnCount + 1))));
-    const totalWidth = colWidth * columnCount;
-    const startX = Math.round((w - totalWidth) / 2);
-
-    return {
-      w,
-      h,
-      columnCount,
-      colWidth,
-      totalWidth,
-      startX,
-      colCenterX: (colIdx) => startX + colWidth * colIdx + colWidth / 2,
-      lineX: (lineIdx) => startX + colWidth * lineIdx
-    };
-  }
-
-  renderGrid() {
-    const ctx = this.ctx;
-    const w = this.cssWidth;
-    const h = this.cssHeight;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, w, h);
-
-    if (this.options.gridType === 'vertical') {
-      const m = this.getColumnMetrics();
-
-      ctx.save();
-
-      // 1. 垂直輔助虛線
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([4, 4]);
-
-      for (let i = 0; i <= m.columnCount; i++) {
-        const x = m.lineX(i);
-        ctx.beginPath();
-        ctx.moveTo(x, 15);
-        ctx.lineTo(x, h - 20);
-        ctx.stroke();
-      }
-
-      ctx.setLineDash([]);
-
-      // 2. 欄位標籤：十、個
-      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const labels = [
-        { col: 1, text: '', color: '#94a3b8' },
-        { col: 2, text: '', color: '#94a3b8' },
-        { col: 3, text: '十', color: '#2563eb' },
-        { col: 4, text: '個', color: '#2563eb' }
-      ];
-
-      for (const item of labels) {
-        if (!item.text) continue;
-        ctx.fillStyle = item.color;
-        ctx.fillText(item.text, m.colCenterX(item.col), 34);
-      }
-
-      // 3. 標題橫向分隔線
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(m.startX, 54);
-      ctx.lineTo(m.startX + m.totalWidth, 54);
-      ctx.stroke();
-
-      // 4. 進退位標記輔助虛線
-      ctx.strokeStyle = '#f1f5f9';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(m.startX, 92);
-      ctx.lineTo(m.startX + m.totalWidth, 92);
-      ctx.stroke();
-
-      ctx.font = '11px -apple-system, sans-serif';
-      ctx.fillStyle = '#94a3b8';
-      ctx.textAlign = 'center';
-      ctx.fillText('進退位', m.colCenterX(2), 73);
-
-      ctx.restore();
-
-    } else if (this.options.gridType === 'grid') {
-      const gridSize = 30;
-      ctx.save();
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let x = 0; x <= w; x += gridSize) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-      }
-      for (let y = 0; y <= h; y += gridSize) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-      }
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  renderStampedProblem() {
-    if (!this.stampedProblem) return;
-    const { num1, num2, op } = this.stampedProblem;
-    const ctx = this.ctx;
-    const m = this.getColumnMetrics();
-
-    ctx.save();
-    ctx.font = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#1e293b';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const yRow1 = 142;
-    const yRow2 = 206;
-    const yCalcLine = 244;
-
-    const drawDigits = (num, y) => {
-      const s = String(num);
-      const len = s.length;
-      for (let i = 0; i < len; i++) {
-        const digitChar = s[len - 1 - i];
-        const targetCol = 4 - i;
-        if (targetCol >= 0) {
-          ctx.fillText(digitChar, m.colCenterX(targetCol), y);
-        }
-      }
-    };
-
-    drawDigits(num1, yRow1);
-    drawDigits(num2, yRow2);
-
-    ctx.fillStyle = op === '+' ? '#2563eb' : '#dc2626';
-    ctx.fillText(op, m.colCenterX(2), yRow2);
-
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 3.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(m.lineX(2) + 6, yCalcLine);
-    ctx.lineTo(m.startX + m.totalWidth - 6, yCalcLine);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  render() {
-    this.renderGrid();
-    this.renderStampedProblem();
-
-    for (const stroke of this.strokes) {
-      const points = stroke.points;
-      if (!points || points.length === 0) continue;
-
-      const ctx = this.ctx;
-      ctx.save();
-      ctx.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color;
-      ctx.fillStyle = stroke.isEraser ? '#ffffff' : stroke.color;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      if (points.length === 1) {
-        ctx.beginPath();
-        const baseW = stroke.width || 4;
-        const radius = stroke.isEraser
-          ? (baseW * 4.0) / 2
-          : (baseW * (0.6 + points[0].pressure * 0.8)) / 2;
-        ctx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        continue;
-      }
-
-      for (let i = 1; i < points.length; i++) {
-        const p1 = points[i - 1];
-        const p2 = points[i];
-        const baseW = stroke.width || 4;
-        let lineWidth = baseW;
-        if (stroke.isEraser) {
-          lineWidth = baseW * 4.0;
-        } else if (this.options.pressureSensitive && p2.pointerType === 'pen') {
-          lineWidth = baseW * (0.5 + p2.pressure * 1.0);
-        } else {
-          lineWidth = baseW * 0.9;
-        }
-        ctx.lineWidth = lineWidth;
-
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    }
-  }
-
-  stampProblem(question) {
-    this.stampedProblem = question;
-    this.render();
-  }
-
-  clearStampedProblem() {
-    this.stampedProblem = null;
-    this.render();
-  }
-
-  undo() {
-    if (this.isLocked || this.strokes.length === 0) return false;
-    this.strokes.pop();
-    this.render();
-    return true;
-  }
-
-  clear() {
-    if (this.isLocked) return;
-    this.strokes = [];
-    this.render();
-  }
-
-  getStrokes() {
-    return JSON.parse(JSON.stringify(this.strokes));
-  }
-
-  loadStrokes(strokes = [], stampedProblem = null) {
-    this.strokes = strokes ? JSON.parse(JSON.stringify(strokes)) : [];
-    this.stampedProblem = stampedProblem || null;
-    this.render();
-  }
-
-  setPenColor(color) {
-    this.options.penColor = color;
-    this.isEraser = false;
-  }
-
-  setPenWidth(width) {
-    this.options.penWidth = width;
-  }
-
-  setEraser(enable) {
-    this.isEraser = enable;
-  }
-
-  setGridType(type) {
-    this.options.gridType = type;
-    this.render();
-  }
-
-  setPenOnly(enable) {
-    this.options.penOnly = enable;
-  }
-
-  getSnapshot() {
-    if (this.strokes.length === 0 && !this.stampedProblem) {
-      return null;
-    }
-    return this.canvas.toDataURL('image/png');
-  }
-
-  hasStrokes() {
-    return this.strokes.length > 0;
-  }
-}
-
-
 // === 題庫管理模組 ===
 /**
  * 數學測驗題庫管理模組
@@ -1156,8 +674,8 @@ const recordsManager = new RecordsManager();
 
 // === 主控制器 ===
 /**
- * 數學加減模擬測驗 App 主控制器
- * 支援：個位進位加法、十幾退位減法、全卷跳題、iPad 草稿板、交卷前總覽、自動批改與錯題專項重測
+ * 數學簡單測驗 App 主控制器
+ * 支援：個位進位加法、十幾退位減法、全卷跳題、交卷前總覽、自動批改與錯題專項重測
  */
 
 
@@ -1166,7 +684,6 @@ const STORAGE_KEY_SETTINGS = 'gifted_s_math_exam_settings';
 class MathExamController {
   constructor() {
     this.settings = {
-      penOnly: false,
       soundEffects: true,
       defaultCount: '20',
       defaultTimer: 'none'
@@ -1187,11 +704,9 @@ class MathExamController {
 
     this.currentInput = '';
     this.timer = new QuizTimer();
-    this.canvas = null;
 
     this.initDOM();
     this.loadSettings();
-    this.initCanvas();
     this.initTimerCallbacks();
     this.bindEvents();
     this.populateBankSelect();
@@ -1241,15 +756,6 @@ class MathExamController {
     this.btnQuizNext = document.getElementById('btn-quiz-next');
     this.btnClearInput = document.getElementById('btn-clear-input');
 
-    // 草稿板
-    this.canvasEl = document.getElementById('scratchpad-canvas');
-    this.btnStampFormula = document.getElementById('btn-stamp-formula');
-    this.btnCanvasPen = document.getElementById('btn-canvas-pen');
-    this.btnCanvasEraser = document.getElementById('btn-canvas-eraser');
-    this.btnCanvasUndo = document.getElementById('btn-canvas-undo');
-    this.btnCanvasClear = document.getElementById('btn-canvas-clear');
-    this.gridModeBtns = document.querySelectorAll('.grid-mode-btn');
-
     // 視圖 3: 交卷總覽 (Review)
     this.reviewStatBadge = document.getElementById('review-stat-badge');
     this.reviewUnansweredAlert = document.getElementById('review-unanswered-alert');
@@ -1288,7 +794,6 @@ class MathExamController {
     this.btnOpenAddBank = document.getElementById('btn-open-add-bank');
 
     // 視圖 7: 設定 (Settings)
-    this.settingPenOnly = document.getElementById('setting-pen-only');
     this.settingSound = document.getElementById('setting-sound');
     this.settingDefaultCount = document.getElementById('setting-default-count');
     this.settingDefaultTimer = document.getElementById('setting-default-timer');
@@ -1307,10 +812,6 @@ class MathExamController {
     this.btnQuickAddCarry = document.getElementById('btn-quick-add-carry');
     this.btnQuickAddBorrow = document.getElementById('btn-quick-add-borrow');
     this.btnSaveNewBank = document.getElementById('btn-save-new-bank');
-
-    this.modalSnapshot = document.getElementById('modal-snapshot');
-    this.modalSnapshotTitle = document.getElementById('modal-snapshot-title');
-    this.modalSnapshotImg = document.getElementById('modal-snapshot-img');
   }
 
   loadSettings() {
@@ -1324,7 +825,6 @@ class MathExamController {
     }
 
     sound.setMuted(!this.settings.soundEffects);
-    if (this.settingPenOnly) this.settingPenOnly.checked = !!this.settings.penOnly;
     if (this.settingSound) this.settingSound.checked = !!this.settings.soundEffects;
     if (this.settingDefaultCount) this.settingDefaultCount.value = this.settings.defaultCount || '20';
     if (this.settingDefaultTimer) this.settingDefaultTimer.value = this.settings.defaultTimer || 'none';
@@ -1338,15 +838,11 @@ class MathExamController {
   }
 
   saveSettings() {
-    this.settings.penOnly = this.settingPenOnly.checked;
     this.settings.soundEffects = this.settingSound.checked;
     this.settings.defaultCount = this.settingDefaultCount.value;
     this.settings.defaultTimer = this.settingDefaultTimer.value;
 
     sound.setMuted(!this.settings.soundEffects);
-    if (this.canvas) {
-      this.canvas.setPenOnly(this.settings.penOnly);
-    }
 
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(this.settings));
@@ -1355,17 +851,6 @@ class MathExamController {
     } catch (e) {
       console.error('Failed to save settings:', e);
     }
-  }
-
-  initCanvas() {
-    if (!this.canvasEl) return;
-    this.canvas = new ScratchpadCanvas(this.canvasEl, {
-      gridType: 'vertical',
-      penColor: '#1e293b',
-      penWidth: 4,
-      pressureSensitive: true,
-      penOnly: this.settings.penOnly
-    });
   }
 
   initTimerCallbacks() {
@@ -1521,7 +1006,6 @@ class MathExamController {
 
     // 實體鍵盤監聽支援 (iPad 巧控鍵盤、外接鍵盤、桌機)
     window.addEventListener('keydown', (e) => {
-      // 僅在測驗進行中處理
       if (!this.views.quiz.classList.contains('active')) return;
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 
@@ -1544,62 +1028,6 @@ class MathExamController {
         e.preventDefault();
         this.nextQuestion();
       }
-    });
-
-    // 草稿板工具按鈕
-    if (this.btnStampFormula) {
-      this.btnStampFormula.addEventListener('click', () => {
-        sound.playTap();
-        const q = this.activeExam.questions[this.activeExam.currentIndex];
-        if (q && this.canvas) {
-          this.canvas.stampProblem({
-            num1: q.num1,
-            num2: q.num2,
-            op: q.op
-          });
-        }
-      });
-    }
-    if (this.btnCanvasPen) {
-      this.btnCanvasPen.addEventListener('click', () => {
-        sound.playTap();
-        this.btnCanvasPen.classList.add('active');
-        this.btnCanvasEraser.classList.remove('active');
-        if (this.canvas) this.canvas.setEraser(false);
-      });
-    }
-    if (this.btnCanvasEraser) {
-      this.btnCanvasEraser.addEventListener('click', () => {
-        sound.playTap();
-        this.btnCanvasEraser.classList.add('active');
-        this.btnCanvasPen.classList.remove('active');
-        if (this.canvas) this.canvas.setEraser(true);
-      });
-    }
-    if (this.btnCanvasUndo) {
-      this.btnCanvasUndo.addEventListener('click', () => {
-        sound.playTap();
-        if (this.canvas) this.canvas.undo();
-      });
-    }
-    if (this.btnCanvasClear) {
-      this.btnCanvasClear.addEventListener('click', () => {
-        sound.playTap();
-        if (confirm('確定要清空草稿板嗎？')) {
-          if (this.canvas) this.canvas.clear();
-        }
-      });
-    }
-
-    // 草稿板底格切換
-    this.gridModeBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        sound.playTap();
-        this.gridModeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const gridType = btn.dataset.grid;
-        if (this.canvas) this.canvas.setGridType(gridType);
-      });
     });
 
     // 總覽畫面按鈕
@@ -1736,13 +1164,6 @@ class MathExamController {
     if (this.views[name]) {
       this.views[name].classList.add('active');
     }
-
-    // 若切換至作答區，重繪 Canvas
-    if (name === 'quiz' && this.canvas) {
-      setTimeout(() => {
-        this.canvas.handleResize();
-      }, 50);
-    }
   }
 
   startExam({ bankId, count, random, timerMode }) {
@@ -1761,7 +1182,7 @@ class MathExamController {
     this.activeExam = {
       bankId: bank.id,
       bankName: bank.name,
-      questions: rawQuestions.map((q, idx) => ({
+      questions: rawQuestions.map((q) => ({
         id: q.id,
         num1: q.num1,
         op: q.op,
@@ -1769,8 +1190,6 @@ class MathExamController {
         answer: q.answer,
         isRegroup: q.isRegroup,
         userAnswer: '',
-        strokes: [],
-        snapshot: null,
         isCorrect: false
       })),
       currentIndex: 0,
@@ -1879,11 +1298,6 @@ class MathExamController {
     this.btnQuizPrev.disabled = (index === 0);
     this.btnQuizNext.textContent = (index === this.activeExam.questions.length - 1) ? '交卷核對 ➔' : '下一題 ➔';
 
-    // 載入草稿筆劃快照
-    if (this.canvas) {
-      this.canvas.loadStrokes(q.strokes, { num1: q.num1, num2: q.num2, op: q.op });
-    }
-
     this.updatePillStrip();
   }
 
@@ -1893,11 +1307,6 @@ class MathExamController {
     if (!q) return;
 
     q.userAnswer = this.currentInput;
-    if (this.canvas) {
-      q.strokes = this.canvas.getStrokes();
-      q.snapshot = this.canvas.getSnapshot();
-    }
-
     this.updatePillStrip();
   }
 
@@ -2050,7 +1459,7 @@ class MathExamController {
     this.showScreen('result');
   }
 
-  renderResultScreen({ score, totalCount, correctCount, wrongCount, timeSpent, wrongProblems }) {
+  renderResultScreen({ score, totalCount, correctCount, wrongCount, timeSpent }) {
     this.resultScoreNum.textContent = `${score} 分`;
     if (score === 100) {
       this.resultScorePraise.textContent = '太棒了！滿分全對！🌟 表現卓越！';
@@ -2079,7 +1488,7 @@ class MathExamController {
 
     // 逐題詳解清單
     this.resultDetailsList.innerHTML = '';
-    this.activeExam.questions.forEach((q, idx) => {
+    this.activeExam.questions.forEach((q) => {
       const row = document.createElement('div');
       row.className = 'result-detail-row ' + (q.isCorrect ? 'correct' : 'wrong');
 
@@ -2096,15 +1505,8 @@ class MathExamController {
         <div class="detail-answer-wrap">
           <span>你的答案：<strong class="detail-user-ans ${q.isCorrect ? 'correct' : 'wrong'}">${userAnsText}</strong></span>
           ${!q.isCorrect ? `<span>正確答案：<strong class="detail-correct-ans">${q.answer}</strong></span>` : ''}
-          ${q.snapshot ? `<button class="tool-btn btn-view-snap" data-snap-idx="${idx}" style="padding: 4px 10px; font-size: 0.8rem;">📝 查看草稿</button>` : ''}
         </div>
       `;
-
-      if (q.snapshot) {
-        row.querySelector('.btn-view-snap').addEventListener('click', () => {
-          this.openSnapshotModal(q.snapshot, `第 ${idx + 1} 題：${q.num1} ${q.op} ${q.num2} 草稿筆劃`);
-        });
-      }
 
       this.resultDetailsList.appendChild(row);
     });
@@ -2114,7 +1516,7 @@ class MathExamController {
     const wrongQs = this.activeExam.questions.filter(q => !q.isCorrect);
     if (wrongQs.length === 0) return;
 
-    this.activeExam.questions = wrongQs.map((q, idx) => ({
+    this.activeExam.questions = wrongQs.map((q) => ({
       id: q.id,
       num1: q.num1,
       op: q.op,
@@ -2122,8 +1524,6 @@ class MathExamController {
       answer: q.answer,
       isRegroup: q.isRegroup,
       userAnswer: '',
-      strokes: [],
-      snapshot: null,
       isCorrect: false
     }));
 
@@ -2266,18 +1666,12 @@ class MathExamController {
 
     bank.problems.forEach(p => {
       const pill = document.createElement('div');
-      pill.className = 'problem-pill';
+      pill.className = 'problem-pill-large';
       pill.textContent = `${p.num1} ${p.op} ${p.num2} = ${p.answer}`;
       this.modalBankProblemsGrid.appendChild(pill);
     });
 
     this.modalBankProblems.classList.add('active');
-  }
-
-  openSnapshotModal(dataUrl, title) {
-    this.modalSnapshotTitle.textContent = title || '手寫草稿筆劃檢視';
-    this.modalSnapshotImg.src = dataUrl;
-    this.modalSnapshot.classList.add('active');
   }
 }
 

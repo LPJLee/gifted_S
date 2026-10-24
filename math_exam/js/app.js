@@ -1,11 +1,10 @@
 /**
- * 數學加減模擬測驗 App 主控制器
- * 支援：個位進位加法、十幾退位減法、全卷跳題、iPad 草稿板、交卷前總覽、自動批改與錯題專項重測
+ * 數學簡單測驗 App 主控制器
+ * 支援：個位進位加法、十幾退位減法、全卷跳題、交卷前總覽、自動批改與錯題專項重測
  */
 
 import { sound } from './sound.js';
 import { QuizTimer } from './timer.js';
-import { ScratchpadCanvas } from './canvas.js';
 import { bankManager } from './bank.js';
 import { recordsManager } from './records.js';
 
@@ -14,7 +13,6 @@ const STORAGE_KEY_SETTINGS = 'gifted_s_math_exam_settings';
 class MathExamController {
   constructor() {
     this.settings = {
-      penOnly: false,
       soundEffects: true,
       defaultCount: '20',
       defaultTimer: 'none'
@@ -35,11 +33,9 @@ class MathExamController {
 
     this.currentInput = '';
     this.timer = new QuizTimer();
-    this.canvas = null;
 
     this.initDOM();
     this.loadSettings();
-    this.initCanvas();
     this.initTimerCallbacks();
     this.bindEvents();
     this.populateBankSelect();
@@ -89,15 +85,6 @@ class MathExamController {
     this.btnQuizNext = document.getElementById('btn-quiz-next');
     this.btnClearInput = document.getElementById('btn-clear-input');
 
-    // 草稿板
-    this.canvasEl = document.getElementById('scratchpad-canvas');
-    this.btnStampFormula = document.getElementById('btn-stamp-formula');
-    this.btnCanvasPen = document.getElementById('btn-canvas-pen');
-    this.btnCanvasEraser = document.getElementById('btn-canvas-eraser');
-    this.btnCanvasUndo = document.getElementById('btn-canvas-undo');
-    this.btnCanvasClear = document.getElementById('btn-canvas-clear');
-    this.gridModeBtns = document.querySelectorAll('.grid-mode-btn');
-
     // 視圖 3: 交卷總覽 (Review)
     this.reviewStatBadge = document.getElementById('review-stat-badge');
     this.reviewUnansweredAlert = document.getElementById('review-unanswered-alert');
@@ -136,7 +123,6 @@ class MathExamController {
     this.btnOpenAddBank = document.getElementById('btn-open-add-bank');
 
     // 視圖 7: 設定 (Settings)
-    this.settingPenOnly = document.getElementById('setting-pen-only');
     this.settingSound = document.getElementById('setting-sound');
     this.settingDefaultCount = document.getElementById('setting-default-count');
     this.settingDefaultTimer = document.getElementById('setting-default-timer');
@@ -155,10 +141,6 @@ class MathExamController {
     this.btnQuickAddCarry = document.getElementById('btn-quick-add-carry');
     this.btnQuickAddBorrow = document.getElementById('btn-quick-add-borrow');
     this.btnSaveNewBank = document.getElementById('btn-save-new-bank');
-
-    this.modalSnapshot = document.getElementById('modal-snapshot');
-    this.modalSnapshotTitle = document.getElementById('modal-snapshot-title');
-    this.modalSnapshotImg = document.getElementById('modal-snapshot-img');
   }
 
   loadSettings() {
@@ -172,7 +154,6 @@ class MathExamController {
     }
 
     sound.setMuted(!this.settings.soundEffects);
-    if (this.settingPenOnly) this.settingPenOnly.checked = !!this.settings.penOnly;
     if (this.settingSound) this.settingSound.checked = !!this.settings.soundEffects;
     if (this.settingDefaultCount) this.settingDefaultCount.value = this.settings.defaultCount || '20';
     if (this.settingDefaultTimer) this.settingDefaultTimer.value = this.settings.defaultTimer || 'none';
@@ -186,15 +167,11 @@ class MathExamController {
   }
 
   saveSettings() {
-    this.settings.penOnly = this.settingPenOnly.checked;
     this.settings.soundEffects = this.settingSound.checked;
     this.settings.defaultCount = this.settingDefaultCount.value;
     this.settings.defaultTimer = this.settingDefaultTimer.value;
 
     sound.setMuted(!this.settings.soundEffects);
-    if (this.canvas) {
-      this.canvas.setPenOnly(this.settings.penOnly);
-    }
 
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(this.settings));
@@ -203,17 +180,6 @@ class MathExamController {
     } catch (e) {
       console.error('Failed to save settings:', e);
     }
-  }
-
-  initCanvas() {
-    if (!this.canvasEl) return;
-    this.canvas = new ScratchpadCanvas(this.canvasEl, {
-      gridType: 'vertical',
-      penColor: '#1e293b',
-      penWidth: 4,
-      pressureSensitive: true,
-      penOnly: this.settings.penOnly
-    });
   }
 
   initTimerCallbacks() {
@@ -369,7 +335,6 @@ class MathExamController {
 
     // 實體鍵盤監聽支援 (iPad 巧控鍵盤、外接鍵盤、桌機)
     window.addEventListener('keydown', (e) => {
-      // 僅在測驗進行中處理
       if (!this.views.quiz.classList.contains('active')) return;
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 
@@ -392,62 +357,6 @@ class MathExamController {
         e.preventDefault();
         this.nextQuestion();
       }
-    });
-
-    // 草稿板工具按鈕
-    if (this.btnStampFormula) {
-      this.btnStampFormula.addEventListener('click', () => {
-        sound.playTap();
-        const q = this.activeExam.questions[this.activeExam.currentIndex];
-        if (q && this.canvas) {
-          this.canvas.stampProblem({
-            num1: q.num1,
-            num2: q.num2,
-            op: q.op
-          });
-        }
-      });
-    }
-    if (this.btnCanvasPen) {
-      this.btnCanvasPen.addEventListener('click', () => {
-        sound.playTap();
-        this.btnCanvasPen.classList.add('active');
-        this.btnCanvasEraser.classList.remove('active');
-        if (this.canvas) this.canvas.setEraser(false);
-      });
-    }
-    if (this.btnCanvasEraser) {
-      this.btnCanvasEraser.addEventListener('click', () => {
-        sound.playTap();
-        this.btnCanvasEraser.classList.add('active');
-        this.btnCanvasPen.classList.remove('active');
-        if (this.canvas) this.canvas.setEraser(true);
-      });
-    }
-    if (this.btnCanvasUndo) {
-      this.btnCanvasUndo.addEventListener('click', () => {
-        sound.playTap();
-        if (this.canvas) this.canvas.undo();
-      });
-    }
-    if (this.btnCanvasClear) {
-      this.btnCanvasClear.addEventListener('click', () => {
-        sound.playTap();
-        if (confirm('確定要清空草稿板嗎？')) {
-          if (this.canvas) this.canvas.clear();
-        }
-      });
-    }
-
-    // 草稿板底格切換
-    this.gridModeBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        sound.playTap();
-        this.gridModeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const gridType = btn.dataset.grid;
-        if (this.canvas) this.canvas.setGridType(gridType);
-      });
     });
 
     // 總覽畫面按鈕
@@ -584,13 +493,6 @@ class MathExamController {
     if (this.views[name]) {
       this.views[name].classList.add('active');
     }
-
-    // 若切換至作答區，重繪 Canvas
-    if (name === 'quiz' && this.canvas) {
-      setTimeout(() => {
-        this.canvas.handleResize();
-      }, 50);
-    }
   }
 
   startExam({ bankId, count, random, timerMode }) {
@@ -609,7 +511,7 @@ class MathExamController {
     this.activeExam = {
       bankId: bank.id,
       bankName: bank.name,
-      questions: rawQuestions.map((q, idx) => ({
+      questions: rawQuestions.map((q) => ({
         id: q.id,
         num1: q.num1,
         op: q.op,
@@ -617,8 +519,6 @@ class MathExamController {
         answer: q.answer,
         isRegroup: q.isRegroup,
         userAnswer: '',
-        strokes: [],
-        snapshot: null,
         isCorrect: false
       })),
       currentIndex: 0,
@@ -727,11 +627,6 @@ class MathExamController {
     this.btnQuizPrev.disabled = (index === 0);
     this.btnQuizNext.textContent = (index === this.activeExam.questions.length - 1) ? '交卷核對 ➔' : '下一題 ➔';
 
-    // 載入草稿筆劃快照
-    if (this.canvas) {
-      this.canvas.loadStrokes(q.strokes, { num1: q.num1, num2: q.num2, op: q.op });
-    }
-
     this.updatePillStrip();
   }
 
@@ -741,11 +636,6 @@ class MathExamController {
     if (!q) return;
 
     q.userAnswer = this.currentInput;
-    if (this.canvas) {
-      q.strokes = this.canvas.getStrokes();
-      q.snapshot = this.canvas.getSnapshot();
-    }
-
     this.updatePillStrip();
   }
 
@@ -898,7 +788,7 @@ class MathExamController {
     this.showScreen('result');
   }
 
-  renderResultScreen({ score, totalCount, correctCount, wrongCount, timeSpent, wrongProblems }) {
+  renderResultScreen({ score, totalCount, correctCount, wrongCount, timeSpent }) {
     this.resultScoreNum.textContent = `${score} 分`;
     if (score === 100) {
       this.resultScorePraise.textContent = '太棒了！滿分全對！🌟 表現卓越！';
@@ -927,7 +817,7 @@ class MathExamController {
 
     // 逐題詳解清單
     this.resultDetailsList.innerHTML = '';
-    this.activeExam.questions.forEach((q, idx) => {
+    this.activeExam.questions.forEach((q) => {
       const row = document.createElement('div');
       row.className = 'result-detail-row ' + (q.isCorrect ? 'correct' : 'wrong');
 
@@ -944,15 +834,8 @@ class MathExamController {
         <div class="detail-answer-wrap">
           <span>你的答案：<strong class="detail-user-ans ${q.isCorrect ? 'correct' : 'wrong'}">${userAnsText}</strong></span>
           ${!q.isCorrect ? `<span>正確答案：<strong class="detail-correct-ans">${q.answer}</strong></span>` : ''}
-          ${q.snapshot ? `<button class="tool-btn btn-view-snap" data-snap-idx="${idx}" style="padding: 4px 10px; font-size: 0.8rem;">📝 查看草稿</button>` : ''}
         </div>
       `;
-
-      if (q.snapshot) {
-        row.querySelector('.btn-view-snap').addEventListener('click', () => {
-          this.openSnapshotModal(q.snapshot, `第 ${idx + 1} 題：${q.num1} ${q.op} ${q.num2} 草稿筆劃`);
-        });
-      }
 
       this.resultDetailsList.appendChild(row);
     });
@@ -962,7 +845,7 @@ class MathExamController {
     const wrongQs = this.activeExam.questions.filter(q => !q.isCorrect);
     if (wrongQs.length === 0) return;
 
-    this.activeExam.questions = wrongQs.map((q, idx) => ({
+    this.activeExam.questions = wrongQs.map((q) => ({
       id: q.id,
       num1: q.num1,
       op: q.op,
@@ -970,8 +853,6 @@ class MathExamController {
       answer: q.answer,
       isRegroup: q.isRegroup,
       userAnswer: '',
-      strokes: [],
-      snapshot: null,
       isCorrect: false
     }));
 
@@ -1114,18 +995,12 @@ class MathExamController {
 
     bank.problems.forEach(p => {
       const pill = document.createElement('div');
-      pill.className = 'problem-pill';
+      pill.className = 'problem-pill-large';
       pill.textContent = `${p.num1} ${p.op} ${p.num2} = ${p.answer}`;
       this.modalBankProblemsGrid.appendChild(pill);
     });
 
     this.modalBankProblems.classList.add('active');
-  }
-
-  openSnapshotModal(dataUrl, title) {
-    this.modalSnapshotTitle.textContent = title || '手寫草稿筆劃檢視';
-    this.modalSnapshotImg.src = dataUrl;
-    this.modalSnapshot.classList.add('active');
   }
 }
 

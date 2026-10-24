@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>數學加減模擬測驗 - 題庫與總題數測驗</title>
+  <title>數學簡單測驗 - 題庫與總題數測驗</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -436,26 +436,15 @@ header.app-header {
   cursor: pointer;
 }
 
-/* 作答雙欄舞台 */
-.quiz-main-stage {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: 16px;
-  flex: 1;
-  min-height: 520px;
-}
-
-@media (max-width: 880px) {
-  .quiz-main-stage {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 左欄：算式與作答輸入 */
-.quiz-left-panel {
+/* 簡單測驗置中舞台 */
+.quiz-single-stage {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+  flex: 1;
 }
 
 .problem-card {
@@ -618,124 +607,7 @@ header.app-header {
   cursor: not-allowed;
 }
 
-/* 右欄：Apple Pencil 直式草稿板 */
-.quiz-right-panel {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
 
-.scratchpad-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: #fcfcfd;
-}
-
-.scratchpad-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.scratchpad-tools {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tool-sep {
-  width: 1px;
-  height: 20px;
-  background: var(--border-color);
-  margin: 0 2px;
-}
-
-.canvas-tool-btn {
-  border: 1px solid var(--border-color);
-  background: #ffffff;
-  color: #334155;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-
-.canvas-tool-btn.active {
-  background: #eff6ff;
-  color: var(--primary);
-  border-color: #bfdbfe;
-}
-
-.canvas-tool-btn.danger:hover {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #fca5a5;
-}
-
-.scratchpad-canvas-wrap {
-  flex: 1;
-  position: relative;
-  min-height: 400px;
-  background: #ffffff;
-  touch-action: none;
-}
-
-#scratchpad-canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.scratchpad-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  border-top: 1px solid var(--border-color);
-  background: #fcfcfd;
-}
-
-.grid-mode-selector {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.grid-mode-btn {
-  border: 1px solid var(--border-color);
-  background: #ffffff;
-  color: #475569;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.grid-mode-btn.active {
-  background: #eff6ff;
-  color: var(--primary);
-  border-color: #93c5fd;
-  font-weight: 700;
-}
 
 /* ================= 視圖 3: 交卷前總覽 (Review) ================= */
 .review-header-card {
@@ -1189,6 +1061,51 @@ header.app-header {
   padding: 4px;
 }
 
+/* 題庫檢視超大畫面 (最大化) */
+.modal-box-max {
+  width: 96vw;
+  max-width: 1280px;
+  height: 90vh;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-body-max {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.problems-preview-grid-max {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+  padding: 8px 4px;
+}
+
+.problem-pill-large {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  padding: 16px 20px;
+  border-radius: 14px;
+  font-size: 1.45rem;
+  font-weight: 800;
+  text-align: center;
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.problem-pill-large:hover {
+  border-color: var(--primary);
+  background: #eff6ff;
+  color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
 .problem-pill {
   background: #f8fafc;
   border: 1px solid var(--border-color);
@@ -1352,7 +1269,7 @@ header.app-header {
           <span>←</span> 學習大廳
         </a>
         <div class="brand-icon">🧮</div>
-        <div class="brand-title">數學加減模擬測驗</div>
+        <div class="brand-title">數學簡單測驗</div>
       </div>
       <nav class="nav-tabs">
         <button class="nav-btn active" data-view="quiz">
@@ -1377,9 +1294,9 @@ header.app-header {
       <section id="view-start" class="view-screen active">
         <div class="start-setup-card">
           <div class="setup-header">
-            <h1 class="setup-title">數學加減模擬測驗</h1>
+            <h1 class="setup-title">數學簡單測驗</h1>
             <p class="setup-desc">
-              專為小學低年級與 iPad 設計！涵蓋<strong>個位數加個位數（可進位）</strong>與<strong>十幾減個位數（必退位）</strong>核心題型。支援自由跳題、iPad 直式計算草稿板、交卷前總覽核對、自動批改與錯題專項重測！
+              專為小學低年級與 iPad 設計！涵蓋<strong>個位數加個位數（可進位）</strong>與<strong>十幾減個位數（必退位）</strong>核心題型。支援自由跳題、交卷前總覽核對、自動批改與錯題專項重測！
             </p>
           </div>
 
@@ -1467,87 +1384,49 @@ header.app-header {
           <button id="btn-finish-edit" class="btn-finish-edit">✔ 修改完成，返回總覽 📋</button>
         </div>
 
-        <!-- 雙欄作答主舞台 (左側算式與按鈕，右側直式草稿板) -->
-        <div class="quiz-main-stage">
-          <!-- 左欄：算式與作答輸入 -->
-          <div class="quiz-left-panel">
-            <div class="problem-card">
-              <div class="problem-header">
-                <span class="problem-type-tag" id="problem-type-tag">進位加法</span>
-                <span class="problem-hint" id="problem-hint">請在下方填入正確答案</span>
-              </div>
-              <div id="problem-formula" class="problem-formula">8 + 7 = ?</div>
-              
-              <!-- 答案輸入框 -->
-              <div class="answer-box-wrap">
-                <span class="answer-box-label">答案：</span>
-                <div id="answer-display" class="answer-display">?</div>
-              </div>
+        <!-- 簡單測驗作答舞台 (算式與數字大鍵盤) -->
+        <div class="quiz-single-stage">
+          <div class="problem-card">
+            <div class="problem-header">
+              <span class="problem-type-tag" id="problem-type-tag">進位加法</span>
+              <span class="problem-hint" id="problem-hint">請在下方填入正確答案</span>
             </div>
-
-            <!-- 虛擬數字大鍵盤 (觸控極佳，iPad 與滑鼠通用) -->
-            <div class="keypad-grid">
-              <button class="key-btn" data-key="1">1</button>
-              <button class="key-btn" data-key="2">2</button>
-              <button class="key-btn" data-key="3">3</button>
-              <button class="key-btn" data-key="4">4</button>
-              <button class="key-btn" data-key="5">5</button>
-              <button class="key-btn" data-key="6">6</button>
-              <button class="key-btn" data-key="7">7</button>
-              <button class="key-btn" data-key="8">8</button>
-              <button class="key-btn" data-key="9">9</button>
-              <button class="key-btn func-key" data-key="backspace">⌫ 退格</button>
-              <button class="key-btn" data-key="0">0</button>
-              <button class="key-btn submit-key" data-key="enter">✓ 下一題</button>
-            </div>
-
-            <!-- 底部換題控制列 -->
-            <div class="quiz-nav-row">
-              <button id="btn-quiz-prev" class="quiz-step-btn" disabled>
-                <span>⬅ 上一題</span>
-              </button>
-              <button id="btn-clear-input" class="tool-btn" style="padding: 10px 18px;">
-                <span>清空輸入</span>
-              </button>
-              <button id="btn-quiz-next" class="quiz-step-btn primary">
-                <span>下一題 ➔</span>
-              </button>
+            <div id="problem-formula" class="problem-formula">8 + 7 = ?</div>
+            
+            <!-- 答案輸入框 -->
+            <div class="answer-box-wrap">
+              <span class="answer-box-label">答案：</span>
+              <div id="answer-display" class="answer-display">?</div>
             </div>
           </div>
 
-          <!-- 右欄：Apple Pencil 直式計算草稿板 -->
-          <div class="quiz-right-panel">
-            <div class="scratchpad-header">
-              <div class="scratchpad-title">
-                <span>📝 直式計算草稿板</span>
-                <small style="color: #64748b; font-size: 0.8rem;">(支援 Apple Pencil 手寫借位劃線與計算)</small>
-              </div>
-              <div class="scratchpad-tools">
-                <button id="btn-stamp-formula" class="canvas-tool-btn" title="將題目直式印到草稿紙上">
-                  <span>📌 蓋印直式</span>
-                </button>
-                <div class="tool-sep"></div>
-                <button id="btn-canvas-pen" class="canvas-tool-btn active" title="鉛筆">✏️</button>
-                <button id="btn-canvas-eraser" class="canvas-tool-btn" title="橡皮擦">🧹</button>
-                <div class="tool-sep"></div>
-                <button id="btn-canvas-undo" class="canvas-tool-btn" title="復原上一筆">↩️</button>
-                <button id="btn-canvas-clear" class="canvas-tool-btn danger" title="清空草稿">🗑️</button>
-              </div>
-            </div>
+          <!-- 虛擬數字大鍵盤 (觸控極佳，iPad 與滑鼠通用) -->
+          <div class="keypad-grid">
+            <button class="key-btn" data-key="1">1</button>
+            <button class="key-btn" data-key="2">2</button>
+            <button class="key-btn" data-key="3">3</button>
+            <button class="key-btn" data-key="4">4</button>
+            <button class="key-btn" data-key="5">5</button>
+            <button class="key-btn" data-key="6">6</button>
+            <button class="key-btn" data-key="7">7</button>
+            <button class="key-btn" data-key="8">8</button>
+            <button class="key-btn" data-key="9">9</button>
+            <button class="key-btn func-key" data-key="backspace">⌫ 退格</button>
+            <button class="key-btn" data-key="0">0</button>
+            <button class="key-btn submit-key" data-key="enter">✓ 下一題</button>
+          </div>
 
-            <div class="scratchpad-canvas-wrap">
-              <canvas id="scratchpad-canvas"></canvas>
-            </div>
-
-            <div class="scratchpad-footer">
-              <div class="grid-mode-selector">
-                <span>底格：</span>
-                <button class="grid-mode-btn active" data-grid="vertical">直式對齊線</button>
-                <button class="grid-mode-btn" data-grid="grid">方格紙</button>
-                <button class="grid-mode-btn" data-grid="blank">空白紙</button>
-              </div>
-              <span style="font-size: 0.8rem; color: #94a3b8;">每題草稿筆劃自動快取保存</span>
-            </div>
+          <!-- 底部換題控制列 -->
+          <div class="quiz-nav-row">
+            <button id="btn-quiz-prev" class="quiz-step-btn" disabled>
+              <span>⬅ 上一題</span>
+            </button>
+            <button id="btn-clear-input" class="tool-btn" style="padding: 10px 18px;">
+              <span>清空輸入</span>
+            </button>
+            <button id="btn-quiz-next" class="quiz-step-btn primary">
+              <span>下一題 ➔</span>
+            </button>
           </div>
         </div>
       </section>
@@ -1713,18 +1592,10 @@ header.app-header {
       <!-- ================= 視圖 7: 設定 (Settings) ================= -->
       <section id="view-settings" class="view-screen">
         <div class="panel-card">
-          <h2 class="panel-title">⚙️ 偏好與觸控設定</h2>
-          <p class="panel-subtitle">調整 iPad Apple Pencil 手寫、音效與測驗預設選項：</p>
+          <h2 class="panel-title">⚙️ 偏好與測驗設定</h2>
+          <p class="panel-subtitle">調整音效與測驗預設選項：</p>
 
           <div class="settings-list" style="margin-top: 20px;">
-            <div class="setting-item">
-              <div class="setting-info">
-                <span class="setting-title">✏️ Apple Pencil 專用手寫模式 (防手掌誤觸)</span>
-                <span class="setting-desc">開啟後，草稿板僅接受 Apple Pencil 筆尖書寫，手指手掌碰觸畫布不會留下筆跡。</span>
-              </div>
-              <input id="setting-pen-only" type="checkbox" class="form-toggle">
-            </div>
-
             <div class="setting-item">
               <div class="setting-info">
                 <span class="setting-title">🔊 原生合成音效</span>
@@ -1771,21 +1642,23 @@ header.app-header {
 
     </main>
 
-    <!-- ================= 彈窗 1: 查看題目清單 Modal ================= -->
+    <!-- ================= 彈窗 1: 查看題目清單 Modal (畫面最大化) ================= -->
     <div id="modal-bank-problems" class="modal-overlay">
-      <div class="modal-box" style="max-width: 600px;">
+      <div class="modal-box modal-box-max">
         <div class="modal-header">
-          <h3 id="modal-bank-title" class="modal-title">題庫內容</h3>
-          <button class="modal-close-btn" data-close="modal-bank-problems">✕</button>
+          <div>
+            <h3 id="modal-bank-title" class="modal-title" style="font-size: 1.45rem;">題庫內容</h3>
+            <p id="modal-bank-desc" style="color: #64748b; font-size: 1.05rem; margin-top: 4px;"></p>
+          </div>
+          <button class="modal-close-btn" data-close="modal-bank-problems" style="font-size: 1.8rem; padding: 6px 14px;">✕</button>
         </div>
-        <div class="modal-body">
-          <p id="modal-bank-desc" style="color: #64748b; font-size: 0.95rem; margin-bottom: 12px;"></p>
-          <div id="modal-bank-problems-grid" class="problems-preview-grid">
+        <div class="modal-body modal-body-max">
+          <div id="modal-bank-problems-grid" class="problems-preview-grid-max">
             <!-- 由 JS 動態生成題目膠囊 -->
           </div>
         </div>
         <div class="modal-footer">
-          <button class="tool-btn" data-close="modal-bank-problems">關閉</button>
+          <button class="tool-btn" data-close="modal-bank-problems" style="padding: 12px 28px; font-size: 1.1rem; font-weight: 700;">關閉</button>
         </div>
       </div>
     </div>
@@ -1821,22 +1694,6 @@ header.app-header {
         <div class="modal-footer">
           <button class="tool-btn" data-close="modal-add-bank">取消</button>
           <button id="btn-save-new-bank" class="btn-confirm-submit" style="padding: 10px 20px;">建立題庫</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= 彈窗 3: 查看手寫草稿快照 Modal ================= -->
-    <div id="modal-snapshot" class="modal-overlay">
-      <div class="modal-box" style="max-width: 650px;">
-        <div class="modal-header">
-          <h3 id="modal-snapshot-title" class="modal-title">手寫草稿筆劃檢視</h3>
-          <button class="modal-close-btn" data-close="modal-snapshot">✕</button>
-        </div>
-        <div class="modal-body" style="text-align: center;">
-          <img id="modal-snapshot-img" src="" alt="手寫計算草稿" style="max-width: 100%; max-height: 450px; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-        </div>
-        <div class="modal-footer">
-          <button class="tool-btn" data-close="modal-snapshot">關閉</button>
         </div>
       </div>
     </div>
@@ -2083,488 +1940,6 @@ class QuizTimer {
     const mins = Math.floor(s / 60);
     const secs = s % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-}
-
-
-// === 直式手寫草稿板 ===
-/**
- * 直式手寫草稿板 (Scratchpad Canvas)
- * 深度適配 iPad + Apple Pencil：
- * 1. 240Hz 高頻採樣 (getCoalescedEvents)、落筆即時成點與即時連線
- * 2. 數學對齊：個位、十位與垂直導引虛線、欄位標籤精準對齊
- * 3. 支援進退位輔助標註區、蓋印題目、橡皮擦、復原 (Undo) 與筆跡快照
- */
-
-class ScratchpadCanvas {
-  /**
-   * @param {HTMLCanvasElement} canvasElement 
-   * @param {Object} options 
-   */
-  constructor(canvasElement, options = {}) {
-    this.canvas = canvasElement;
-    this.ctx = canvasElement.getContext('2d');
-
-    this.options = Object.assign({
-      gridType: 'vertical', // 'vertical' (直式對齊線), 'grid' (方格紙), 'blank' (空白)
-      penColor: '#1e293b',
-      penWidth: 4,
-      baseStrokeWidth: 4,
-      pressureSensitive: true,
-      penOnly: false, // 是否僅允許 Apple Pencil (防手掌誤觸)
-      onStrokeEnd: null
-    }, options);
-
-    this.isDrawing = false;
-    this.isEraser = false;
-    this.isLocked = false;
-    this.currentPointerId = null;
-    this.strokes = []; // [ { color, width, isEraser, points: [{x,y,pressure,pointerType}] } ]
-    this.currentStroke = [];
-    this.stampedProblem = null; // 儲存蓋印的題目
-
-    this.dpr = window.devicePixelRatio || 1;
-    this.initCanvasSize();
-    this.bindEvents();
-    this.render();
-
-    window.addEventListener('resize', () => this.handleResize());
-  }
-
-  initCanvasSize() {
-    const rect = this.canvas.getBoundingClientRect();
-    const width = Math.round(rect.width || 600);
-    const height = Math.round(rect.height || 500);
-
-    this.dpr = window.devicePixelRatio || 1;
-
-    this.canvas.width = Math.round(width * this.dpr);
-    this.canvas.height = Math.round(height * this.dpr);
-
-    this.canvas.style.width = width + 'px';
-    this.canvas.style.height = height + 'px';
-
-    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this.cssWidth = width;
-    this.cssHeight = height;
-  }
-
-  handleResize() {
-    this.initCanvasSize();
-    this.render();
-  }
-
-  bindEvents() {
-    const el = this.canvas;
-    el.addEventListener('pointerdown', (e) => this.onPointerDown(e), { passive: false });
-    el.addEventListener('pointermove', (e) => this.onPointerMove(e), { passive: false });
-    el.addEventListener('pointerup', (e) => this.onPointerUp(e), { passive: false });
-    el.addEventListener('pointercancel', (e) => this.onPointerCancel(e), { passive: false });
-  }
-
-  getPointerPos(e) {
-    const rect = this.canvas.getBoundingClientRect();
-    const scaleX = rect.width > 0 ? (this.cssWidth / rect.width) : 1;
-    const scaleY = rect.height > 0 ? (this.cssHeight / rect.height) : 1;
-
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-      pressure: (e.pressure !== undefined && e.pressure > 0) ? e.pressure : 0.5,
-      pointerType: e.pointerType
-    };
-  }
-
-  onPointerDown(e) {
-    if (this.isLocked) return;
-
-    if (this.options.penOnly && e.pointerType === 'touch') {
-      return;
-    }
-
-    e.preventDefault();
-
-    try {
-      this.canvas.setPointerCapture(e.pointerId);
-    } catch (err) {}
-
-    this.isDrawing = true;
-    this.currentPointerId = e.pointerId;
-
-    const pt = this.getPointerPos(e);
-    this.currentStroke = [pt];
-    this.drawDot(pt);
-  }
-
-  onPointerMove(e) {
-    if (!this.isDrawing || this.isLocked) return;
-    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
-
-    e.preventDefault();
-
-    const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
-      ? e.getCoalescedEvents()
-      : [e];
-
-    for (const ev of events) {
-      const pt = this.getPointerPos(ev);
-      const lastPt = this.currentStroke[this.currentStroke.length - 1];
-
-      if (lastPt) {
-        const dx = pt.x - lastPt.x;
-        const dy = pt.y - lastPt.y;
-        if (dx * dx + dy * dy >= 0.25) {
-          this.currentStroke.push(pt);
-          this.drawSegment(lastPt, pt);
-        }
-      } else {
-        this.currentStroke.push(pt);
-      }
-    }
-  }
-
-  onPointerUp(e) {
-    if (!this.isDrawing) return;
-    if (this.currentPointerId !== null && e.pointerId !== this.currentPointerId) return;
-
-    this.isDrawing = false;
-    this.currentPointerId = null;
-
-    try {
-      this.canvas.releasePointerCapture(e.pointerId);
-    } catch (err) {}
-
-    if (this.currentStroke.length > 0) {
-      this.strokes.push({
-        color: this.options.penColor,
-        width: this.options.penWidth,
-        isEraser: this.isEraser,
-        points: [...this.currentStroke]
-      });
-      this.currentStroke = [];
-    }
-
-    if (this.options.onStrokeEnd) {
-      this.options.onStrokeEnd();
-    }
-  }
-
-  onPointerCancel(e) {
-    this.onPointerUp(e);
-  }
-
-  drawDot(pt) {
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.fillStyle = this.isEraser ? '#ffffff' : this.options.penColor;
-    ctx.beginPath();
-
-    const baseW = this.options.penWidth || 4;
-    const radius = this.isEraser
-      ? (baseW * 4.0) / 2
-      : (baseW * (0.6 + pt.pressure * 0.8)) / 2;
-
-    ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  drawSegment(p1, p2) {
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.strokeStyle = this.isEraser ? '#ffffff' : this.options.penColor;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    const baseW = this.options.penWidth || 4;
-    let lineWidth = baseW;
-    if (this.isEraser) {
-      lineWidth = baseW * 4.0;
-    } else if (this.options.pressureSensitive && p2.pointerType === 'pen') {
-      lineWidth = baseW * (0.5 + p2.pressure * 1.0);
-    } else {
-      lineWidth = baseW * 0.9;
-    }
-    ctx.lineWidth = lineWidth;
-
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  getColumnMetrics() {
-    const w = this.cssWidth;
-    const h = this.cssHeight;
-    const columnCount = 5; // [0: 符號, 1: 千位, 2: 百位, 3: 十位, 4: 個位]
-
-    const colWidth = Math.min(88, Math.max(68, Math.floor((w - 50) / (columnCount + 1))));
-    const totalWidth = colWidth * columnCount;
-    const startX = Math.round((w - totalWidth) / 2);
-
-    return {
-      w,
-      h,
-      columnCount,
-      colWidth,
-      totalWidth,
-      startX,
-      colCenterX: (colIdx) => startX + colWidth * colIdx + colWidth / 2,
-      lineX: (lineIdx) => startX + colWidth * lineIdx
-    };
-  }
-
-  renderGrid() {
-    const ctx = this.ctx;
-    const w = this.cssWidth;
-    const h = this.cssHeight;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, w, h);
-
-    if (this.options.gridType === 'vertical') {
-      const m = this.getColumnMetrics();
-
-      ctx.save();
-
-      // 1. 垂直輔助虛線
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([4, 4]);
-
-      for (let i = 0; i <= m.columnCount; i++) {
-        const x = m.lineX(i);
-        ctx.beginPath();
-        ctx.moveTo(x, 15);
-        ctx.lineTo(x, h - 20);
-        ctx.stroke();
-      }
-
-      ctx.setLineDash([]);
-
-      // 2. 欄位標籤：十、個
-      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const labels = [
-        { col: 1, text: '', color: '#94a3b8' },
-        { col: 2, text: '', color: '#94a3b8' },
-        { col: 3, text: '十', color: '#2563eb' },
-        { col: 4, text: '個', color: '#2563eb' }
-      ];
-
-      for (const item of labels) {
-        if (!item.text) continue;
-        ctx.fillStyle = item.color;
-        ctx.fillText(item.text, m.colCenterX(item.col), 34);
-      }
-
-      // 3. 標題橫向分隔線
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(m.startX, 54);
-      ctx.lineTo(m.startX + m.totalWidth, 54);
-      ctx.stroke();
-
-      // 4. 進退位標記輔助虛線
-      ctx.strokeStyle = '#f1f5f9';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(m.startX, 92);
-      ctx.lineTo(m.startX + m.totalWidth, 92);
-      ctx.stroke();
-
-      ctx.font = '11px -apple-system, sans-serif';
-      ctx.fillStyle = '#94a3b8';
-      ctx.textAlign = 'center';
-      ctx.fillText('進退位', m.colCenterX(2), 73);
-
-      ctx.restore();
-
-    } else if (this.options.gridType === 'grid') {
-      const gridSize = 30;
-      ctx.save();
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let x = 0; x <= w; x += gridSize) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-      }
-      for (let y = 0; y <= h; y += gridSize) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-      }
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  renderStampedProblem() {
-    if (!this.stampedProblem) return;
-    const { num1, num2, op } = this.stampedProblem;
-    const ctx = this.ctx;
-    const m = this.getColumnMetrics();
-
-    ctx.save();
-    ctx.font = 'bold 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#1e293b';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const yRow1 = 142;
-    const yRow2 = 206;
-    const yCalcLine = 244;
-
-    const drawDigits = (num, y) => {
-      const s = String(num);
-      const len = s.length;
-      for (let i = 0; i < len; i++) {
-        const digitChar = s[len - 1 - i];
-        const targetCol = 4 - i;
-        if (targetCol >= 0) {
-          ctx.fillText(digitChar, m.colCenterX(targetCol), y);
-        }
-      }
-    };
-
-    drawDigits(num1, yRow1);
-    drawDigits(num2, yRow2);
-
-    ctx.fillStyle = op === '+' ? '#2563eb' : '#dc2626';
-    ctx.fillText(op, m.colCenterX(2), yRow2);
-
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 3.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(m.lineX(2) + 6, yCalcLine);
-    ctx.lineTo(m.startX + m.totalWidth - 6, yCalcLine);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  render() {
-    this.renderGrid();
-    this.renderStampedProblem();
-
-    for (const stroke of this.strokes) {
-      const points = stroke.points;
-      if (!points || points.length === 0) continue;
-
-      const ctx = this.ctx;
-      ctx.save();
-      ctx.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color;
-      ctx.fillStyle = stroke.isEraser ? '#ffffff' : stroke.color;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      if (points.length === 1) {
-        ctx.beginPath();
-        const baseW = stroke.width || 4;
-        const radius = stroke.isEraser
-          ? (baseW * 4.0) / 2
-          : (baseW * (0.6 + points[0].pressure * 0.8)) / 2;
-        ctx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        continue;
-      }
-
-      for (let i = 1; i < points.length; i++) {
-        const p1 = points[i - 1];
-        const p2 = points[i];
-        const baseW = stroke.width || 4;
-        let lineWidth = baseW;
-        if (stroke.isEraser) {
-          lineWidth = baseW * 4.0;
-        } else if (this.options.pressureSensitive && p2.pointerType === 'pen') {
-          lineWidth = baseW * (0.5 + p2.pressure * 1.0);
-        } else {
-          lineWidth = baseW * 0.9;
-        }
-        ctx.lineWidth = lineWidth;
-
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    }
-  }
-
-  stampProblem(question) {
-    this.stampedProblem = question;
-    this.render();
-  }
-
-  clearStampedProblem() {
-    this.stampedProblem = null;
-    this.render();
-  }
-
-  undo() {
-    if (this.isLocked || this.strokes.length === 0) return false;
-    this.strokes.pop();
-    this.render();
-    return true;
-  }
-
-  clear() {
-    if (this.isLocked) return;
-    this.strokes = [];
-    this.render();
-  }
-
-  getStrokes() {
-    return JSON.parse(JSON.stringify(this.strokes));
-  }
-
-  loadStrokes(strokes = [], stampedProblem = null) {
-    this.strokes = strokes ? JSON.parse(JSON.stringify(strokes)) : [];
-    this.stampedProblem = stampedProblem || null;
-    this.render();
-  }
-
-  setPenColor(color) {
-    this.options.penColor = color;
-    this.isEraser = false;
-  }
-
-  setPenWidth(width) {
-    this.options.penWidth = width;
-  }
-
-  setEraser(enable) {
-    this.isEraser = enable;
-  }
-
-  setGridType(type) {
-    this.options.gridType = type;
-    this.render();
-  }
-
-  setPenOnly(enable) {
-    this.options.penOnly = enable;
-  }
-
-  getSnapshot() {
-    if (this.strokes.length === 0 && !this.stampedProblem) {
-      return null;
-    }
-    return this.canvas.toDataURL('image/png');
-  }
-
-  hasStrokes() {
-    return this.strokes.length > 0;
   }
 }
 
@@ -3003,8 +2378,8 @@ const recordsManager = new RecordsManager();
 
 // === 主控制器 ===
 /**
- * 數學加減模擬測驗 App 主控制器
- * 支援：個位進位加法、十幾退位減法、全卷跳題、iPad 草稿板、交卷前總覽、自動批改與錯題專項重測
+ * 數學簡單測驗 App 主控制器
+ * 支援：個位進位加法、十幾退位減法、全卷跳題、交卷前總覽、自動批改與錯題專項重測
  */
 
 
@@ -3013,7 +2388,6 @@ const STORAGE_KEY_SETTINGS = 'gifted_s_math_exam_settings';
 class MathExamController {
   constructor() {
     this.settings = {
-      penOnly: false,
       soundEffects: true,
       defaultCount: '20',
       defaultTimer: 'none'
@@ -3034,11 +2408,9 @@ class MathExamController {
 
     this.currentInput = '';
     this.timer = new QuizTimer();
-    this.canvas = null;
 
     this.initDOM();
     this.loadSettings();
-    this.initCanvas();
     this.initTimerCallbacks();
     this.bindEvents();
     this.populateBankSelect();
@@ -3088,15 +2460,6 @@ class MathExamController {
     this.btnQuizNext = document.getElementById('btn-quiz-next');
     this.btnClearInput = document.getElementById('btn-clear-input');
 
-    // 草稿板
-    this.canvasEl = document.getElementById('scratchpad-canvas');
-    this.btnStampFormula = document.getElementById('btn-stamp-formula');
-    this.btnCanvasPen = document.getElementById('btn-canvas-pen');
-    this.btnCanvasEraser = document.getElementById('btn-canvas-eraser');
-    this.btnCanvasUndo = document.getElementById('btn-canvas-undo');
-    this.btnCanvasClear = document.getElementById('btn-canvas-clear');
-    this.gridModeBtns = document.querySelectorAll('.grid-mode-btn');
-
     // 視圖 3: 交卷總覽 (Review)
     this.reviewStatBadge = document.getElementById('review-stat-badge');
     this.reviewUnansweredAlert = document.getElementById('review-unanswered-alert');
@@ -3135,7 +2498,6 @@ class MathExamController {
     this.btnOpenAddBank = document.getElementById('btn-open-add-bank');
 
     // 視圖 7: 設定 (Settings)
-    this.settingPenOnly = document.getElementById('setting-pen-only');
     this.settingSound = document.getElementById('setting-sound');
     this.settingDefaultCount = document.getElementById('setting-default-count');
     this.settingDefaultTimer = document.getElementById('setting-default-timer');
@@ -3154,10 +2516,6 @@ class MathExamController {
     this.btnQuickAddCarry = document.getElementById('btn-quick-add-carry');
     this.btnQuickAddBorrow = document.getElementById('btn-quick-add-borrow');
     this.btnSaveNewBank = document.getElementById('btn-save-new-bank');
-
-    this.modalSnapshot = document.getElementById('modal-snapshot');
-    this.modalSnapshotTitle = document.getElementById('modal-snapshot-title');
-    this.modalSnapshotImg = document.getElementById('modal-snapshot-img');
   }
 
   loadSettings() {
@@ -3171,7 +2529,6 @@ class MathExamController {
     }
 
     sound.setMuted(!this.settings.soundEffects);
-    if (this.settingPenOnly) this.settingPenOnly.checked = !!this.settings.penOnly;
     if (this.settingSound) this.settingSound.checked = !!this.settings.soundEffects;
     if (this.settingDefaultCount) this.settingDefaultCount.value = this.settings.defaultCount || '20';
     if (this.settingDefaultTimer) this.settingDefaultTimer.value = this.settings.defaultTimer || 'none';
@@ -3185,15 +2542,11 @@ class MathExamController {
   }
 
   saveSettings() {
-    this.settings.penOnly = this.settingPenOnly.checked;
     this.settings.soundEffects = this.settingSound.checked;
     this.settings.defaultCount = this.settingDefaultCount.value;
     this.settings.defaultTimer = this.settingDefaultTimer.value;
 
     sound.setMuted(!this.settings.soundEffects);
-    if (this.canvas) {
-      this.canvas.setPenOnly(this.settings.penOnly);
-    }
 
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(this.settings));
@@ -3202,17 +2555,6 @@ class MathExamController {
     } catch (e) {
       console.error('Failed to save settings:', e);
     }
-  }
-
-  initCanvas() {
-    if (!this.canvasEl) return;
-    this.canvas = new ScratchpadCanvas(this.canvasEl, {
-      gridType: 'vertical',
-      penColor: '#1e293b',
-      penWidth: 4,
-      pressureSensitive: true,
-      penOnly: this.settings.penOnly
-    });
   }
 
   initTimerCallbacks() {
@@ -3368,7 +2710,6 @@ class MathExamController {
 
     // 實體鍵盤監聽支援 (iPad 巧控鍵盤、外接鍵盤、桌機)
     window.addEventListener('keydown', (e) => {
-      // 僅在測驗進行中處理
       if (!this.views.quiz.classList.contains('active')) return;
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 
@@ -3391,62 +2732,6 @@ class MathExamController {
         e.preventDefault();
         this.nextQuestion();
       }
-    });
-
-    // 草稿板工具按鈕
-    if (this.btnStampFormula) {
-      this.btnStampFormula.addEventListener('click', () => {
-        sound.playTap();
-        const q = this.activeExam.questions[this.activeExam.currentIndex];
-        if (q && this.canvas) {
-          this.canvas.stampProblem({
-            num1: q.num1,
-            num2: q.num2,
-            op: q.op
-          });
-        }
-      });
-    }
-    if (this.btnCanvasPen) {
-      this.btnCanvasPen.addEventListener('click', () => {
-        sound.playTap();
-        this.btnCanvasPen.classList.add('active');
-        this.btnCanvasEraser.classList.remove('active');
-        if (this.canvas) this.canvas.setEraser(false);
-      });
-    }
-    if (this.btnCanvasEraser) {
-      this.btnCanvasEraser.addEventListener('click', () => {
-        sound.playTap();
-        this.btnCanvasEraser.classList.add('active');
-        this.btnCanvasPen.classList.remove('active');
-        if (this.canvas) this.canvas.setEraser(true);
-      });
-    }
-    if (this.btnCanvasUndo) {
-      this.btnCanvasUndo.addEventListener('click', () => {
-        sound.playTap();
-        if (this.canvas) this.canvas.undo();
-      });
-    }
-    if (this.btnCanvasClear) {
-      this.btnCanvasClear.addEventListener('click', () => {
-        sound.playTap();
-        if (confirm('確定要清空草稿板嗎？')) {
-          if (this.canvas) this.canvas.clear();
-        }
-      });
-    }
-
-    // 草稿板底格切換
-    this.gridModeBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        sound.playTap();
-        this.gridModeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const gridType = btn.dataset.grid;
-        if (this.canvas) this.canvas.setGridType(gridType);
-      });
     });
 
     // 總覽畫面按鈕
@@ -3583,13 +2868,6 @@ class MathExamController {
     if (this.views[name]) {
       this.views[name].classList.add('active');
     }
-
-    // 若切換至作答區，重繪 Canvas
-    if (name === 'quiz' && this.canvas) {
-      setTimeout(() => {
-        this.canvas.handleResize();
-      }, 50);
-    }
   }
 
   startExam({ bankId, count, random, timerMode }) {
@@ -3608,7 +2886,7 @@ class MathExamController {
     this.activeExam = {
       bankId: bank.id,
       bankName: bank.name,
-      questions: rawQuestions.map((q, idx) => ({
+      questions: rawQuestions.map((q) => ({
         id: q.id,
         num1: q.num1,
         op: q.op,
@@ -3616,8 +2894,6 @@ class MathExamController {
         answer: q.answer,
         isRegroup: q.isRegroup,
         userAnswer: '',
-        strokes: [],
-        snapshot: null,
         isCorrect: false
       })),
       currentIndex: 0,
@@ -3726,11 +3002,6 @@ class MathExamController {
     this.btnQuizPrev.disabled = (index === 0);
     this.btnQuizNext.textContent = (index === this.activeExam.questions.length - 1) ? '交卷核對 ➔' : '下一題 ➔';
 
-    // 載入草稿筆劃快照
-    if (this.canvas) {
-      this.canvas.loadStrokes(q.strokes, { num1: q.num1, num2: q.num2, op: q.op });
-    }
-
     this.updatePillStrip();
   }
 
@@ -3740,11 +3011,6 @@ class MathExamController {
     if (!q) return;
 
     q.userAnswer = this.currentInput;
-    if (this.canvas) {
-      q.strokes = this.canvas.getStrokes();
-      q.snapshot = this.canvas.getSnapshot();
-    }
-
     this.updatePillStrip();
   }
 
@@ -3897,7 +3163,7 @@ class MathExamController {
     this.showScreen('result');
   }
 
-  renderResultScreen({ score, totalCount, correctCount, wrongCount, timeSpent, wrongProblems }) {
+  renderResultScreen({ score, totalCount, correctCount, wrongCount, timeSpent }) {
     this.resultScoreNum.textContent = `${score} 分`;
     if (score === 100) {
       this.resultScorePraise.textContent = '太棒了！滿分全對！🌟 表現卓越！';
@@ -3926,7 +3192,7 @@ class MathExamController {
 
     // 逐題詳解清單
     this.resultDetailsList.innerHTML = '';
-    this.activeExam.questions.forEach((q, idx) => {
+    this.activeExam.questions.forEach((q) => {
       const row = document.createElement('div');
       row.className = 'result-detail-row ' + (q.isCorrect ? 'correct' : 'wrong');
 
@@ -3943,15 +3209,8 @@ class MathExamController {
         <div class="detail-answer-wrap">
           <span>你的答案：<strong class="detail-user-ans ${q.isCorrect ? 'correct' : 'wrong'}">${userAnsText}</strong></span>
           ${!q.isCorrect ? `<span>正確答案：<strong class="detail-correct-ans">${q.answer}</strong></span>` : ''}
-          ${q.snapshot ? `<button class="tool-btn btn-view-snap" data-snap-idx="${idx}" style="padding: 4px 10px; font-size: 0.8rem;">📝 查看草稿</button>` : ''}
         </div>
       `;
-
-      if (q.snapshot) {
-        row.querySelector('.btn-view-snap').addEventListener('click', () => {
-          this.openSnapshotModal(q.snapshot, `第 ${idx + 1} 題：${q.num1} ${q.op} ${q.num2} 草稿筆劃`);
-        });
-      }
 
       this.resultDetailsList.appendChild(row);
     });
@@ -3961,7 +3220,7 @@ class MathExamController {
     const wrongQs = this.activeExam.questions.filter(q => !q.isCorrect);
     if (wrongQs.length === 0) return;
 
-    this.activeExam.questions = wrongQs.map((q, idx) => ({
+    this.activeExam.questions = wrongQs.map((q) => ({
       id: q.id,
       num1: q.num1,
       op: q.op,
@@ -3969,8 +3228,6 @@ class MathExamController {
       answer: q.answer,
       isRegroup: q.isRegroup,
       userAnswer: '',
-      strokes: [],
-      snapshot: null,
       isCorrect: false
     }));
 
@@ -4113,18 +3370,12 @@ class MathExamController {
 
     bank.problems.forEach(p => {
       const pill = document.createElement('div');
-      pill.className = 'problem-pill';
+      pill.className = 'problem-pill-large';
       pill.textContent = `${p.num1} ${p.op} ${p.num2} = ${p.answer}`;
       this.modalBankProblemsGrid.appendChild(pill);
     });
 
     this.modalBankProblems.classList.add('active');
-  }
-
-  openSnapshotModal(dataUrl, title) {
-    this.modalSnapshotTitle.textContent = title || '手寫草稿筆劃檢視';
-    this.modalSnapshotImg.src = dataUrl;
-    this.modalSnapshot.classList.add('active');
   }
 }
 

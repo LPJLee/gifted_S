@@ -418,26 +418,15 @@ header.app-header {
   cursor: pointer;
 }
 
-/* 作答雙欄舞台 */
-.quiz-main-stage {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: 16px;
-  flex: 1;
-  min-height: 520px;
-}
-
-@media (max-width: 880px) {
-  .quiz-main-stage {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 左欄：算式與作答輸入 */
-.quiz-left-panel {
+/* 簡單測驗置中舞台 */
+.quiz-single-stage {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+  flex: 1;
 }
 
 .problem-card {
@@ -600,124 +589,7 @@ header.app-header {
   cursor: not-allowed;
 }
 
-/* 右欄：Apple Pencil 直式草稿板 */
-.quiz-right-panel {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
 
-.scratchpad-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: #fcfcfd;
-}
-
-.scratchpad-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.scratchpad-tools {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tool-sep {
-  width: 1px;
-  height: 20px;
-  background: var(--border-color);
-  margin: 0 2px;
-}
-
-.canvas-tool-btn {
-  border: 1px solid var(--border-color);
-  background: #ffffff;
-  color: #334155;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-
-.canvas-tool-btn.active {
-  background: #eff6ff;
-  color: var(--primary);
-  border-color: #bfdbfe;
-}
-
-.canvas-tool-btn.danger:hover {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #fca5a5;
-}
-
-.scratchpad-canvas-wrap {
-  flex: 1;
-  position: relative;
-  min-height: 400px;
-  background: #ffffff;
-  touch-action: none;
-}
-
-#scratchpad-canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.scratchpad-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  border-top: 1px solid var(--border-color);
-  background: #fcfcfd;
-}
-
-.grid-mode-selector {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.grid-mode-btn {
-  border: 1px solid var(--border-color);
-  background: #ffffff;
-  color: #475569;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.grid-mode-btn.active {
-  background: #eff6ff;
-  color: var(--primary);
-  border-color: #93c5fd;
-  font-weight: 700;
-}
 
 /* ================= 視圖 3: 交卷前總覽 (Review) ================= */
 .review-header-card {
@@ -1169,6 +1041,51 @@ header.app-header {
   max-height: 380px;
   overflow-y: auto;
   padding: 4px;
+}
+
+/* 題庫檢視超大畫面 (最大化) */
+.modal-box-max {
+  width: 96vw;
+  max-width: 1280px;
+  height: 90vh;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-body-max {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.problems-preview-grid-max {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+  padding: 8px 4px;
+}
+
+.problem-pill-large {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  padding: 16px 20px;
+  border-radius: 14px;
+  font-size: 1.45rem;
+  font-weight: 800;
+  text-align: center;
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.problem-pill-large:hover {
+  border-color: var(--primary);
+  background: #eff6ff;
+  color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .problem-pill {
