@@ -455,6 +455,27 @@
       </div>
     </div>
 
+    <!-- ================= 彈窗 3: 歷次測驗逐題明細 Modal ================= -->
+    <div id="modal-record-detail" class="modal-overlay">
+      <div class="modal-box modal-box-max">
+        <div class="modal-header">
+          <div>
+            <h3 id="modal-rec-detail-title" class="modal-title" style="font-size: 1.35rem;">📋 測驗作答詳解</h3>
+            <p id="modal-rec-detail-subtitle" style="color: #64748b; font-size: 0.95rem; margin-top: 4px;"></p>
+          </div>
+          <button class="modal-close-btn" data-close="modal-record-detail" style="font-size: 1.8rem; padding: 6px 14px;">✕</button>
+        </div>
+        <div class="modal-body modal-body-max">
+          <div id="modal-rec-detail-list" class="result-details-list">
+            <!-- 由 JS 動態注入逐題結果 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="tool-btn" data-close="modal-record-detail" style="padding: 10px 24px; font-size: 1rem; font-weight: 700;">關閉</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- 內嵌腳本 -->

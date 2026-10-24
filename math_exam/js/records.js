@@ -57,13 +57,27 @@ class RecordsManager {
       score: score,
       timeSpentSec: timeSpentSec || 0,
       avgSpeedSec: totalCount > 0 ? (timeSpentSec / totalCount).toFixed(1) : '0',
-      wrongProblems: wrongProblems || [], // 錯題清單 (純文字與算式)
+      wrongProblems: (wrongProblems || []).map(wp => {
+        const uAns = (wp.userAnswer !== undefined && wp.userAnswer !== null && String(wp.userAnswer).trim() !== '')
+          ? String(wp.userAnswer).trim()
+          : '未作答';
+        return {
+          num1: wp.num1,
+          op: wp.op,
+          num2: wp.num2,
+          answer: wp.answer,
+          userAnswer: uAns,
+          formula: `${wp.num1} ${wp.op} ${wp.num2} = ${wp.answer}`
+        };
+      }),
       items: (items || []).map(item => ({
         num1: item.num1,
         op: item.op,
         num2: item.num2,
         answer: item.answer,
-        userAnswer: item.userAnswer,
+        userAnswer: (item.userAnswer !== undefined && item.userAnswer !== null && String(item.userAnswer).trim() !== '')
+          ? String(item.userAnswer).trim()
+          : '未作答',
         isCorrect: !!item.isCorrect,
         formula: `${item.num1} ${item.op} ${item.num2} = ${item.answer}`
       }))
@@ -115,10 +129,14 @@ class RecordsManager {
               op: wp.op,
               num2: wp.num2,
               answer: wp.answer,
-              count: 0
+              count: 0,
+              userAnswers: []
             };
           }
           freqMap[key].count++;
+          if (wp.userAnswer && wp.userAnswer !== '未作答' && wp.userAnswer !== '未填寫') {
+            freqMap[key].userAnswers.push(wp.userAnswer);
+          }
         }
       }
     }

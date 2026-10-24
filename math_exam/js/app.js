@@ -757,12 +757,15 @@ class MathExamController {
       if (isCorrect) {
         correctCount++;
       } else {
+        const uAns = (q.userAnswer !== undefined && q.userAnswer !== null && String(q.userAnswer).trim() !== '')
+          ? String(q.userAnswer).trim()
+          : '未作答';
         wrongProblems.push({
           num1: q.num1,
           op: q.op,
           num2: q.num2,
           answer: q.answer,
-          userAnswer: q.userAnswer
+          userAnswer: uAns
         });
       }
     });
@@ -891,7 +894,12 @@ class MathExamController {
       topWrongs.forEach(item => {
         const pill = document.createElement('div');
         pill.className = 'ranking-pill';
-        pill.innerHTML = `<span>${item.num1} ${item.op} ${item.num2} = ${item.answer}</span> <small style="opacity: 0.85;">(${item.count}次)</small>`;
+        let wrongNote = '';
+        if (item.userAnswers && item.userAnswers.length > 0) {
+          const uniqueAnswers = [...new Set(item.userAnswers)].slice(0, 2);
+          wrongNote = ` <span style="font-size: 0.8rem; opacity: 0.9; color: #fee2e2;">(常誤填: ${uniqueAnswers.join(', ')})</span>`;
+        }
+        pill.innerHTML = `<span>${item.num1} ${item.op} ${item.num2} = ${item.answer}</span> <small style="opacity: 0.85;">(${item.count}次)</small>${wrongNote}`;
         this.topWrongContainer.appendChild(pill);
       });
     }
@@ -913,21 +921,84 @@ class MathExamController {
       if (rec.score >= 90) scoreClass = 'high';
       else if (rec.score < 60) scoreClass = 'low';
 
+      // 提取錯題資訊並相容舊資料結構
+      const wrongList = (rec.wrongProblems || []).map(w => {
+        let uAns = w.userAnswer;
+        if (uAns === undefined || uAns === null || uAns === '') {
+          if (rec.items && Array.isArray(rec.items)) {
+            const foundItem = rec.items.find(it => it.num1 === w.num1 && it.op === w.op && it.num2 === w.num2);
+            if (foundItem && foundItem.userAnswer !== undefined && foundItem.userAnswer !== null && foundItem.userAnswer !== '') {
+              uAns = foundItem.userAnswer;
+            }
+          }
+        }
+        if (uAns === undefined || uAns === null || String(uAns).trim() === '') {
+          uAns = '未填寫';
+        }
+        return {
+          num1: w.num1,
+          op: w.op,
+          num2: w.num2,
+          answer: w.answer,
+          userAnswer: uAns
+        };
+      });
+
       card.innerHTML = `
-        <div class="record-info">
-          <div class="record-title">${rec.bankName}</div>
-          <div class="record-meta">${rec.dateStr} · 共 ${rec.totalCount} 題 · 答對 ${rec.correctCount} 題 · 用時 ${this.timer.formatTime(rec.timeSpentSec)}</div>
-          ${rec.wrongProblems && rec.wrongProblems.length > 0 ? `
-            <div style="margin-top: 6px; font-size: 0.85rem; color: #dc2626;">
-              錯題：${rec.wrongProblems.map(w => `${w.num1}${w.op}${w.num2}`).join('、')}
+        <div class="record-header-row">
+          <div>
+            <div class="record-title">${rec.bankName}</div>
+            <div class="record-meta">
+              <span>📅 ${rec.dateStr}</span> · 
+              <span>共 ${rec.totalCount} 題</span> · 
+              <span style="color: #16a34a; font-weight: 700;">答對 ${rec.correctCount} 題</span> · 
+              <span style="color: ${rec.wrongCount > 0 ? '#dc2626' : '#64748b'}; font-weight: 700;">答錯 ${rec.wrongCount} 題</span> · 
+              <span>用時 ${this.timer.formatTime(rec.timeSpentSec)}</span>
             </div>
-          ` : ''}
-        </div>
-        <div style="display: flex; align-items: center; gap: 14px;">
+          </div>
           <div class="record-badge-score ${scoreClass}">${rec.score} 分</div>
-          <button class="tool-btn danger btn-del-record" data-rec-id="${rec.id}" title="刪除此筆紀錄" style="padding: 6px 10px;">🗑️</button>
+        </div>
+
+        ${wrongList.length > 0 ? `
+          <div class="record-wrong-box">
+            <div class="record-wrong-title">
+              <span>❌ 錯題與作答記錄 (${wrongList.length} 題)：</span>
+            </div>
+            <div class="record-wrong-chips">
+              ${wrongList.map(w => `
+                <div class="record-wrong-chip">
+                  <span class="wrong-chip-formula">${w.num1} ${w.op} ${w.num2} = ${w.answer}</span>
+                  <span class="wrong-chip-divider">|</span>
+                  <span class="wrong-chip-ans">誤填：<strong class="wrong-chip-val">${w.userAnswer}</strong></span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : `
+          <div class="record-perfect-box">
+            <span>🌟 滿分全對！所有題目均正確答對！</span>
+          </div>
+        `}
+
+        <div class="record-footer-actions">
+          ${rec.items && rec.items.length > 0 ? `
+            <button class="tool-btn btn-view-rec-detail" data-rec-id="${rec.id}" style="padding: 6px 14px; font-size: 0.85rem;">
+              <span>📋 查看整份作答明細</span>
+            </button>
+          ` : ''}
+          <button class="tool-btn danger btn-del-record" data-rec-id="${rec.id}" title="刪除此筆紀錄" style="padding: 6px 12px; font-size: 0.85rem;">
+            <span>🗑️ 刪除紀錄</span>
+          </button>
         </div>
       `;
+
+      const viewDetailBtn = card.querySelector('.btn-view-rec-detail');
+      if (viewDetailBtn) {
+        viewDetailBtn.addEventListener('click', () => {
+          sound.playTap();
+          this.openRecordDetailModal(rec);
+        });
+      }
 
       card.querySelector('.btn-del-record').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -940,6 +1011,41 @@ class MathExamController {
 
       this.recordsListContainer.appendChild(card);
     });
+  }
+
+  openRecordDetailModal(rec) {
+    const modal = document.getElementById('modal-record-detail');
+    const title = document.getElementById('modal-rec-detail-title');
+    const subtitle = document.getElementById('modal-rec-detail-subtitle');
+    const list = document.getElementById('modal-rec-detail-list');
+    if (!modal || !list) return;
+
+    title.textContent = `📋 測驗作答明細 - ${rec.bankName}`;
+    subtitle.textContent = `${rec.dateStr} · 得分：${rec.score} 分 · 共 ${rec.totalCount} 題 · 答對 ${rec.correctCount} 題 · 答錯 ${rec.wrongCount} 題 · 用時 ${this.timer.formatTime(rec.timeSpentSec)}`;
+    list.innerHTML = '';
+
+    (rec.items || []).forEach((it, idx) => {
+      const row = document.createElement('div');
+      row.className = 'result-detail-row ' + (it.isCorrect ? 'correct' : 'wrong');
+      const userAnsText = (it.userAnswer !== undefined && it.userAnswer !== null && String(it.userAnswer).trim() !== '') ? it.userAnswer : '未填答';
+
+      row.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 1.25rem;">${it.isCorrect ? '✅' : '❌'}</span>
+          <div>
+            <div class="detail-formula">第 ${idx + 1} 題：${it.num1} ${it.op} ${it.num2} = ${it.answer}</div>
+            <div style="font-size: 0.8rem; color: #64748b;">${it.op === '+' ? '加法運算' : '退位減法'}</div>
+          </div>
+        </div>
+        <div class="detail-answer-wrap">
+          <span>作答內容：<strong class="detail-user-ans ${it.isCorrect ? 'correct' : 'wrong'}">${userAnsText}</strong></span>
+          ${!it.isCorrect ? `<span>正確答案：<strong class="detail-correct-ans">${it.answer}</strong></span>` : ''}
+        </div>
+      `;
+      list.appendChild(row);
+    });
+
+    modal.classList.add('active');
   }
 
   renderBanksScreen() {

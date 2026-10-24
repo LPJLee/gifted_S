@@ -943,14 +943,12 @@ header.app-header {
 }
 
 .record-item-card {
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 16px;
   padding: 16px 20px;
   background: #ffffff;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
   transition: all 0.15s ease;
 }
@@ -960,33 +958,132 @@ header.app-header {
   box-shadow: var(--shadow-sm);
 }
 
-.record-info {
+.record-header-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .record-title {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #1e293b;
 }
 
 .record-meta {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .record-badge-score {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 900;
-  padding: 4px 12px;
+  padding: 4px 14px;
   border-radius: 8px;
+  white-space: nowrap;
 }
 
 .record-badge-score.high { background: #ecfdf5; color: #047857; }
 .record-badge-score.mid { background: #fffbeb; color: #b45309; }
 .record-badge-score.low { background: #fef2f2; color: #b91c1c; }
+
+/* 錯題記錄專用區塊 */
+.record-wrong-box {
+  background: #fff5f5;
+  border: 1.5px solid #fed7d7;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.record-wrong-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #dc2626;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.record-wrong-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.record-wrong-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  gap: 8px;
+}
+
+.wrong-chip-formula {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.wrong-chip-divider {
+  color: #cbd5e1;
+}
+
+.wrong-chip-ans {
+  color: #dc2626;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wrong-chip-val {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  border: 1px solid #fca5a5;
+}
+
+.wrong-chip-correct {
+  color: #16a34a;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.record-perfect-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #15803d;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.record-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+}
 
 /* ================= 視圖 6: 題庫管理 (Banks) ================= */
 .banks-grid {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gifted-math-exam-v1';
+const CACHE_NAME = 'gifted-math-exam-v2';
 const ASSETS = [
   './',
   './index.html',
