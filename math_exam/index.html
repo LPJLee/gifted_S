@@ -2023,29 +2023,26 @@ function generateAllSingleAdditionProblems() {
   return list;
 }
 
-// 產生綜合題庫 (各抽 30 題混合，共 60 題)
-function generateMixedDefaultProblems() {
-  const borrowSubs = generateAllBorrowSubtractionProblems(); // 45 題
-  const carryAdds = generateCarryAdditionProblems();         // 45 題
-  
-  // 洗牌輔助
-  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
-  
-  const pickedSubs = shuffle(borrowSubs).slice(0, 30);
-  const pickedAdds = shuffle(carryAdds).slice(0, 30);
-  
-  const combined = shuffle([...pickedAdds, ...pickedSubs]);
-  return combined.map((p, idx) => ({ ...p, id: 'mix_' + (idx + 1) }));
+// 生成雙 45 題完整合併題庫：45 題「個位進位加法」＋ 45 題「十幾退位減法」(共 90 題全收錄)
+function generateCombined90Problems() {
+  const adds = generateCarryAdditionProblems();         // 45 題
+  const subs = generateAllBorrowSubtractionProblems(); // 45 題
+  const list = [];
+  for (let i = 0; i < 45; i++) {
+    list.push({ ...adds[i], id: 'c90_add_' + (i + 1) });
+    list.push({ ...subs[i], id: 'c90_sub_' + (i + 1) });
+  }
+  return list;
 }
 
 const DEFAULT_BANKS = [
   {
-    id: 'bank-default-mixed',
-    name: '🌟 基礎加減綜合測驗 (個位進位加法 + 10幾退位減法)',
-    description: '小一 20 以內加減法核心題型：個位數加個位數（進位）與十位數為 1 之退位減法混合 (60 題精選)',
+    id: 'bank-default-combined-90',
+    name: '🌟 基礎加減雙45題全收錄 (進位加法 + 十幾退位減法·共90題)',
+    description: '完整收錄「個位數加個位數（45題進位加法）」與「十幾減個位數（45題必退位減法）」，總共兩個 45 題合併成 90 題完整大題庫！',
     type: 'mixed',
     isPreset: true,
-    problems: generateMixedDefaultProblems(),
+    problems: generateCombined90Problems(),
     createdAt: 1729700000000
   },
   {
@@ -2089,9 +2086,13 @@ class BankManager {
       const saved = localStorage.getItem(STORAGE_KEY_BANKS);
       if (saved) {
         this.banks = JSON.parse(saved);
-        // 確保預設題庫存在
-        for (const def of DEFAULT_BANKS) {
-          if (!this.banks.some(b => b.id === def.id)) {
+        // 更新或補全預設題庫
+        for (let i = DEFAULT_BANKS.length - 1; i >= 0; i--) {
+          const def = DEFAULT_BANKS[i];
+          const idx = this.banks.findIndex(b => b.id === def.id);
+          if (idx >= 0) {
+            this.banks[idx] = def;
+          } else {
             this.banks.unshift(def);
           }
         }
