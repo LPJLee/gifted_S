@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mathExamGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#1e1b4b" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#mathExamGrad)"/>
+  
+  <g filter="url(#shadow)" fill="#ffffff">
+    <!-- Test Paper Board background -->
+    <rect x="96" y="80" width="320" height="352" rx="28" fill="#ffffff" fill-opacity="0.15"/>
+    <rect x="120" y="104" width="272" height="304" rx="20" fill="#ffffff"/>
+    
+    <!-- Header lines on paper -->
+    <rect x="150" y="136" width="120" height="14" rx="7" fill="#6366f1"/>
+    <circle cx="346" cy="143" r="14" fill="#10b981"/>
+    <path d="M338 143 L344 149 L355 137" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    
+    <!-- Math formula 1: Plus (7 + 8) -->
+    <rect x="150" y="180" width="45" height="10" rx="5" fill="#94a3b8"/>
+    <path d="M210 185 H226 M218 177 V193" stroke="#2563eb" stroke-width="4.5" stroke-linecap="round"/>
+    <rect x="240" y="180" width="45" height="10" rx="5" fill="#94a3b8"/>
+    <path d="M300 182 H316 M300 188 H316" stroke="#2563eb" stroke-width="3.5" stroke-linecap="round"/>
+    
+    <!-- Math formula 2: Minus (14 - 6) -->
+    <rect x="150" y="226" width="55" height="10" rx="5" fill="#94a3b8"/>
+    <path d="M220 231 H236" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"/>
+    <rect x="250" y="226" width="35" height="10" rx="5" fill="#94a3b8"/>
+    <path d="M300 228 H316 M300 234 H316" stroke="#ef4444" stroke-width="3.5" stroke-linecap="round"/>
+
+    <!-- Math vertical layout sample -->
+    <text x="180" y="315" font-family="monospace" font-size="28" font-weight="bold" fill="#1e293b">14</text>
+    <text x="150" y="348" font-family="monospace" font-size="24" font-weight="bold" fill="#ef4444">-</text>
+    <text x="180" y="348" font-family="monospace" font-size="28" font-weight="bold" fill="#1e293b"> 6</text>
+    <line x1="145" y1="360" x2="220" y2="360" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
+    <text x="180" y="392" font-family="monospace" font-size="28" font-weight="bold" fill="#10b981"> 8</text>
+
+    <!-- Stylus / Apple Pencil drawing -->
+    <g transform="translate(260, 260) rotate(35)">
+      <rect x="0" y="0" width="22" height="110" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+      <path d="M0 110 L11 135 L22 110 Z" fill="#e2e8f0"/>
+      <path d="M7 126 L11 135 L15 126 Z" fill="#3b82f6"/>
+      <rect x="0" y="10" width="22" height="8" fill="#3b82f6"/>
+    </g>
+  </g>
+</svg>

@@ -135,6 +135,10 @@
       background: linear-gradient(90deg, #10b981, #34d399);
     }
 
+    .card-math-exam::before {
+      background: linear-gradient(90deg, #0284c7, #2563eb);
+    }
+
     .icon-wrapper {
       width: 64px;
       height: 64px;
@@ -169,6 +173,12 @@
       background: #ecfdf5;
       color: #059669;
       border: 1px solid #a7f3d0;
+    }
+
+    .icon-math-exam {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
     }
 
     h2 {
@@ -212,6 +222,11 @@
       color: #5b21b6;
     }
 
+    .card-math-exam .tag {
+      background: #eff6ff;
+      color: #1e40af;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -253,6 +268,15 @@
     .btn-exam:hover {
       background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
       box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+    }
+
+    .btn-math-exam {
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    }
+
+    .btn-math-exam:hover {
+      background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
     }
 
     .btn-math {
@@ -328,6 +352,28 @@
         </div>
         <a href="./dictation_exam/index.html" class="btn btn-dictation-exam">
           進入模擬測驗 ➔
+        </a>
+      </div>
+
+      <!-- 數學加減模擬測驗 Card (全新功能：題庫與總題數測驗) -->
+      <div class="card card-math-exam">
+        <div>
+          <div class="icon-wrapper icon-math-exam">🧮</div>
+          <h2>數學加減模擬測驗</h2>
+          <p class="card-desc">
+            專為小學低年級設計的進退位測驗！精選個位進位加法與十幾必退位減法（十位數為1且退位）題庫。支援題庫選擇、自訂總題數、全卷跳題、直式草稿板、交卷前總覽與錯題專項重測！
+          </p>
+          <div class="tags">
+            <span class="tag">個位進位加法</span>
+            <span class="tag">十幾退位減法</span>
+            <span class="tag">題庫與總題數</span>
+            <span class="tag">全卷跳題作答</span>
+            <span class="tag">交卷前總覽</span>
+            <span class="tag">錯題專項重測</span>
+          </div>
+        </div>
+        <a href="./math_exam/index.html" class="btn btn-math-exam">
+          進入加減模擬測驗 ➔
         </a>
       </div>
 

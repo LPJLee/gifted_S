@@ -1,0 +1,17 @@
+{
+  "name": "數學模擬測驗 (進退位加減)",
+  "short_name": "數學測驗",
+  "description": "支援個位進位加法與十幾退位減法題庫、自訂題數、全卷跳題、交卷總覽與錯題重測的數學測驗 App",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

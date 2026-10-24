@@ -1518,6 +1518,7 @@ body {
             <span>🔢 運算位數 (最高三位數)</span>
           </label>
           <div class="opt-pill-group" data-field="digitMode">
+            <button class="opt-pill" data-val="grade1_20">小一進退位 (20以內)</button>
             <button class="opt-pill" data-val="1">一位數 (1~9)</button>
             <button class="opt-pill active" data-val="2">二位數 (10~99)</button>
             <button class="opt-pill" data-val="3">三位數 (100~999)</button>
@@ -2045,7 +2046,15 @@ class MathEngine {
   pickDigits(op = '+') {
     let min1, max1, min2, max2;
 
-    if (this.digitMode === '1') {
+    if (this.digitMode === 'grade1_20') {
+      if (op === '+') {
+        // 個位數加個位數 (可以進位)
+        return { min1: 1, max1: 9, min2: 1, max2: 9 };
+      } else {
+        // 兩位數減個位數 (十位數為 1 且退位)
+        return { min1: 10, max1: 18, min2: 1, max2: 9 };
+      }
+    } else if (this.digitMode === '1') {
       if (op === '-' && this.regroupMode === 'must_regroup') {
         // 20以內退位減法 (小一標準課綱退位減法): 被減數 11~18, 減數 2~9
         return { min1: 11, max1: 18, min2: 2, max2: 9 };
@@ -2081,6 +2090,28 @@ class MathEngine {
   createFallbackQuestion(id) {
     let op = this.operation === 'mixed' ? '+' : this.operation;
     let num1, num2;
+    if (this.digitMode === 'grade1_20') {
+      if (op === '+') {
+        num1 = 8; num2 = 7;
+      } else {
+        num1 = 14; num2 = 6;
+      }
+      const answer = op === '+' ? num1 + num2 : num1 - num2;
+      return {
+        id,
+        num1,
+        num2,
+        op,
+        answer,
+        isRegroup: true,
+        vertical: {
+          top: String(num1),
+          bottom: String(num2),
+          op,
+          maxDigits: Math.max(String(num1).length, String(num2).length, String(answer).length)
+        }
+      };
+    }
     if (op === '+') {
       if (this.regroupMode === 'no_regroup') {
         num1 = 23; num2 = 14;
@@ -2133,26 +2164,34 @@ class MathEngine {
       let num2 = this.getRandomInt(min2, max2);
 
       if (op === '-') {
-        // 確保大數減小數 (避免負數)
-        if (num1 < num2) {
-          const temp = num1;
-          num1 = num2;
-          num2 = temp;
-        }
+        if (this.digitMode === 'grade1_20') {
+          // 嚴格確保十位數為 1 (10~18) 且個位小於減數 (必退位)
+          if (num1 < 10 || num1 > 18 || num2 < 1 || num2 > 9 || (num1 % 10 >= num2)) {
+            continue;
+          }
+        } else {
+          // 確保大數減小數 (避免負數)
+          if (num1 < num2) {
+            const temp = num1;
+            num1 = num2;
+            num2 = temp;
+          }
 
-        // 避免減數為0或兩數相同導致答案為0
-        if (num1 === num2 || num2 === 0) {
-          continue;
+          // 避免減數為0或兩數相同導致答案為0
+          if (num1 === num2 || num2 === 0) {
+            continue;
+          }
+
+          const isBorrow = this.hasBorrow(num1, num2);
+          if (this.regroupMode === 'no_regroup' && isBorrow) {
+            continue;
+          }
+          if (this.regroupMode === 'must_regroup' && !isBorrow) {
+            continue;
+          }
         }
 
         const isBorrow = this.hasBorrow(num1, num2);
-        if (this.regroupMode === 'no_regroup' && isBorrow) {
-          continue;
-        }
-        if (this.regroupMode === 'must_regroup' && !isBorrow) {
-          continue;
-        }
-
         const answer = num1 - num2;
         return {
           id,
